@@ -1,0 +1,27 @@
+# InputFile to specify all configurations
+# NOTE: DO NOT LEAVE lines with blank whitespaces (will be stored into miscParams)
+
+### Required Inputs
+Version=1.0
+#cv_pipe=/home/zhangh94/NGCP/MAQSS/build/cv_Pipe
+cv_pipe=/home/pi/NGCP/MAQSS/build/cv_Pipe
+cv_pipe2=/home/pi/NGCP/MAQSS/build/cv_Pipe2
+uart_name=/dev/ttyAMA0
+### End Required Inputs
+
+### Known Inputs (not required)
+baudrate=57600
+camFOV_v=80
+camFOV_h=90
+npoints=25
+dist=50
+head=0
+videoStabilization=1
+
+# Specify pattern according to pattern enum in waypoints.hpp
+pattern=3
+## End Known Inputs
+
+# These will be stored into miscParams
+myName=Frank
+Quad=A

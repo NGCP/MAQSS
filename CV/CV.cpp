@@ -19,6 +19,8 @@
 #include "processInterface.hpp"
 #include "fileIO.hpp"
 
+#define MAX_IMGS 2000
+
 processInterface *Cv_quit;
 configContainer *configs_quit;
 raspicam::RaspiCam *cam_quit;
@@ -53,7 +55,7 @@ void saveImage(std::string filepath, unsigned char *data, raspicam::RaspiCam &Ca
 }
 
 void printCameraParameters(raspicam::RaspiCam *cam) {
-        // Print out the cam parameters for debugging
+    // Print out the cam parameters for debugging
     std::cerr << "\nCAM PARAMS" << std::endl;
     std::cerr << "Format: " << cam->getFormat() << std::endl;
     std::cerr << "Width: " << cam->getWidth() << std::endl;
@@ -90,7 +92,7 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     cam.setExposureCompensation(0);
     cam.setFormat(raspicam::RASPICAM_FORMAT_BGR); // FORMAT MUST BE BGR or colors will be reversed
     cam.setVideoStabilization(configs->videoStabilization);
-    
+
     if (!cam.open()) {
         std::cerr << "Error opening camera" << std::endl;
         exit(1);
@@ -133,6 +135,50 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     return 0;
 }
 
+int testLoop(processInterface *Cv, configContainer *configs) {
+    // run CV process in test mode to continually take up to 2000 images
+
+    raspicam::RaspiCam cam;
+    unsigned char *data = new unsigned char[ cam.getImageBufferSize()];
+    unsigned int nCaptures(0);
+    float cap_freq = 1.0/3.0; // Hz
+    std::string img = "image";
+
+    // Setup interrupt handlers so all interfaces get closed
+    Cv_quit = Cv;
+    configs_quit = configs;
+    cam_quit = &cam;
+    signal(SIGINT, quit_handler);
+
+    // set up camera interface
+    cam.setISO(0);
+    cam.setExposureCompensation(0);
+    cam.setFormat(raspicam::RASPICAM_FORMAT_BGR); // FORMAT MUST BE BGR or colors will be reversed
+    
+    std::cerr << "Setting Video Stabilization: " << configs->videoStabilization << std::endl;
+    cam.setVideoStabilization(configs->videoStabilization);
+
+    if (!cam.open()) {
+        std::cerr << "Error opening camera" << std::endl;
+        exit(1);
+    }
+    std::cerr << "Cam Opened, Sleeping... " << std::endl;
+    sleep(2);
+    std::cerr << "Awake, progressing... " << std::endl;
+
+    // start capturing upto MAX_IMGS images
+    while (nCaptures < MAX_IMGS) {
+        std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1/cap_freq << std::endl;
+        cam.grab();
+        cam.retrieve(data);
+        saveImage(img + std::to_string(nCaptures) + ".ppm", data, cam);
+        nCaptures++;
+        sleep(1.0/cap_freq);
+    }
+    
+    return 0;
+}
+
 int main(int argc, char** argv) {
     configContainer configs;
     if (argc > 1) configs = fileIO::getConfig(argc, argv);
@@ -143,7 +189,8 @@ int main(int argc, char** argv) {
     }
     processInterface Cv(&configs, CV);
 
-    mainLoop(&Cv, &configs);
+    if (configs.camTest) testLoop(&Cv, &configs);
+    else mainLoop(&Cv, &configs);
 
     return 0;
 }

@@ -67,9 +67,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     // Setup Autopilot interface
     Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
     Autopilot_Interface autopilot_interface(&serial_port);
-    serial_port.start();
-    autopilot_interface.start();
-
+    
     // Setup interrupt handlers so all interfaces get closed
     serial_port_quit = &serial_port;
     autopilot_interface_quit = &autopilot_interface;
@@ -78,6 +76,15 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     signal(SIGINT, quit_handler);
 
     // Setup GCS interface
+    if (configs->camTest)  { 
+        std::cerr << "Camera test mode, PNav idling" << std::endl;
+        while(true);
+    }
+    
+    serial_port.start();
+    autopilot_interface.start();
+
+
 
     // TODO: figure out how to orient northwards (point quad north first)
 
@@ -182,11 +189,10 @@ int main(int argc, char** argv) {
         std::cerr << "Must specify command line arguments" << std::endl;
         exit(1); // TODO: Perform closeout/ clean up function when exiting
     }
-    std::cerr << "Got All Configs" << std::endl;
     processInterface PNav(&configs, PNAV);
 
-    std::cerr << "Setup PNav" << std::endl;
     mainLoop(&PNav, &configs);
+
     PNav.cleanup(&configs);
 
     return 0;

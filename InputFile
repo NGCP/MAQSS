@@ -3,6 +3,7 @@
 
 ### Required Inputs
 Version=1.0
+camTest=1
 #cv_pipe=/home/zhangh94/NGCP/MAQSS/build/cv_Pipe
 cv_pipe=/home/pi/NGCP/MAQSS/build/cv_Pipe
 cv_pipe2=/home/pi/NGCP/MAQSS/build/cv_Pipe2

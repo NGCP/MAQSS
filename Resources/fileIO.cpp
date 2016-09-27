@@ -119,6 +119,9 @@ configContainer fileIO::getConfig(int argc, char** argv)
             else if(!strcmp(tmpChars, "head")) configs.head = std::stoi(strtok(NULL, " \n"));
             
             else if(!strcmp(tmpChars, "videoStabilization")) configs.videoStabilization = (std::stoi(strtok(NULL, " \n")) ? true: false);
+            
+            else if(!strcmp(tmpChars, "camTest")) configs.camTest = (std::stoi(strtok(NULL, " \n")) ? true: false);
+            
             // Misc config params
             else
             {

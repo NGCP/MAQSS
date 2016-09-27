@@ -38,6 +38,7 @@ public:
     int camFOV_v = 80; // camera vertical field of view angle (degrees)
     int camFOV_h = 90; // camera horizontal field of view angle (degrees)
     bool videoStabilization = true; // sets raspicam videostabilization option
+    bool camTest = false; // set camera to operate in camera test mode (capture numerous images)
     
     std::map<std::string, void*> miscParams; // store all other input params
 private:

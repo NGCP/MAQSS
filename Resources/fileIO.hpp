@@ -20,6 +20,7 @@ class fileIO {
 public:
     fileIO();
     static configContainer getConfig(int argc, char** argv);
+    static void printConfig(configContainer *configs);
     
 //    static readFile();
     virtual ~fileIO();

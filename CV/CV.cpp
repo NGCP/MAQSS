@@ -91,7 +91,7 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     cam.setISO(0);
     cam.setExposureCompensation(0);
     cam.setFormat(raspicam::RASPICAM_FORMAT_BGR); // FORMAT MUST BE BGR or colors will be reversed
-    cam.setVideoStabilization(configs->videoStabilization);
+    cam.setVideoStabilization(configs->video_Stabilization);
 
     if (!cam.open()) {
         std::cerr << "Error opening camera" << std::endl;
@@ -111,7 +111,7 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     while (true) {
 
         // TODO: Fix raspicam photo capture, its off color
-        read(configs->cv_fd2, tmp, BUF_LEN);
+        read(configs->fd_PNav_to_CV, tmp, BUF_LEN);
         std::cerr << "Read msg from PNav: " << tmp << std::endl;
         sleep(1);
         if (!strcmp(tmp, "Start")) {
@@ -123,7 +123,7 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
                 saveImage(img + std::to_string(ctr) + "_" + std::to_string(ndx) + ".ppm", data, cam);
             }
 
-            Cv->writePipe(configs->cv_fd, done);
+            Cv->writePipe(configs->fd_CV_to_PNav, done);
             ctr++;
         } else if (!strcmp(tmp, "Exit")) {
             cam.release();
@@ -155,8 +155,8 @@ int testLoop(processInterface *Cv, configContainer *configs) {
     cam.setExposureCompensation(0);
     cam.setFormat(raspicam::RASPICAM_FORMAT_BGR); // FORMAT MUST BE BGR or colors will be reversed
     
-    std::cerr << "Setting Video Stabilization: " << configs->videoStabilization << std::endl;
-    cam.setVideoStabilization(configs->videoStabilization);
+    std::cerr << "Setting Video Stabilization: " << configs->video_Stabilization << std::endl;
+    cam.setVideoStabilization(configs->video_Stabilization);
 
     if (!cam.open()) {
         std::cerr << "Error opening camera" << std::endl;
@@ -188,8 +188,8 @@ int main(int argc, char** argv) {
         exit(1); // TODO: Perform closeout/ clean up function when exiting
     }
     processInterface Cv(&configs, CV);
-
-    if (configs.camTest) testLoop(&Cv, &configs);
+    fileIO::printConfig(&configs);
+    if (configs.cam_Test) testLoop(&Cv, &configs);
     else mainLoop(&Cv, &configs);
 
     return 0;

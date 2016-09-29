@@ -87,15 +87,15 @@ configContainer fileIO::getConfig(int argc, char** argv)
                 ctr++; // increment counter for a required input
                 configs.version = strtok(NULL,"  \n");
             }
-            else if (!strcmp(tmpChars, "cv_pipe"))
+            else if (!strcmp(tmpChars, "pipe_CV_to_PNav"))
             {
                 ctr++;
-                configs.cv_pipe = strtok(NULL, " \n");
+                configs.pipe_CV_to_PNav = strtok(NULL, " \n");
             }
-            else if (!strcmp(tmpChars, "cv_pipe2"))
+            else if (!strcmp(tmpChars, "pipe_PNav_to_CV"))
             {
                 ctr++;
-                configs.cv_pipe2 = strtok(NULL, " \n");
+                configs.pipe_PNav_to_CV = strtok(NULL, " \n");
             }
             else if (!strcmp(tmpChars, "uart_name"))
             {
@@ -106,9 +106,9 @@ configContainer fileIO::getConfig(int argc, char** argv)
             // Known config params but not required
             else if(!strcmp(tmpChars, "baudrate")) configs.baudrate = std::stoi(strtok(NULL, " \n"));
             
-            else if(!strcmp(tmpChars, "camFOV_v")) configs.camFOV_v = std::stoi(strtok(NULL, " \n"));
+            else if(!strcmp(tmpChars, "cam_FOV_v")) configs.cam_FOV_v = std::stoi(strtok(NULL, " \n"));
             
-            else if(!strcmp(tmpChars, "camFOV_h")) configs.camFOV_h = std::stoi(strtok(NULL, " \n"));
+            else if(!strcmp(tmpChars, "cam_FOV_h")) configs.cam_FOV_h = std::stoi(strtok(NULL, " \n"));
             
             else if(!strcmp(tmpChars, "npoints")) configs.npoints = std::stoi(strtok(NULL, " \n"));
             
@@ -118,15 +118,21 @@ configContainer fileIO::getConfig(int argc, char** argv)
             
             else if(!strcmp(tmpChars, "head")) configs.head = std::stoi(strtok(NULL, " \n"));
             
-            else if(!strcmp(tmpChars, "videoStabilization")) configs.videoStabilization = (std::stoi(strtok(NULL, " \n")) ? true: false);
+            else if(!strcmp(tmpChars, "video_Stabilization")) configs.video_Stabilization = (std::stoi(strtok(NULL, " \n")) ? true: false);
             
-            else if(!strcmp(tmpChars, "camTest")) configs.camTest = (std::stoi(strtok(NULL, " \n")) ? true: false);
+            else if(!strcmp(tmpChars, "cam_Test")) configs.cam_Test = (std::stoi(strtok(NULL, " \n")) ? true: false);
             
+            else if(!strcmp(tmpChars, "cap_Freq")) configs.cap_Freq = std::stof(strtok(NULL, " \n"));
+            
+            else if(!strcmp(tmpChars, "cam_Width")) configs.cam_Width = std::stoi(strtok(NULL, " \n"));
+            
+            else if(!strcmp(tmpChars, "cam_Height")) configs.cam_Height = std::stoi(strtok(NULL, " \n"));
+        
             // Misc config params
             else
             {
                 // miscParams are stored in a map where the key is the InputFile param name, and the value is a void pointer which points to the data after the '='
-                configs.miscParams[tmpStr] = (void*)(strtok(NULL," \n"));
+                configs.misc_Params[tmpStr] = (void*)(strtok(NULL," \n"));
             }
             
         }
@@ -140,6 +146,39 @@ configContainer fileIO::getConfig(int argc, char** argv)
         exit(1);
     }
     return configs;
+}
+
+void fileIO::printConfig(configContainer *configs) {
+    std::cerr << "Printing Configuration:" << std::endl;
+    std::cerr << "MAQSS Version: " << configs->version << std::endl;
+    std::cerr << std::endl;
+    
+    std::cerr << "Interface Parameters:" << std::endl;
+    std::cerr << "CV write to PNav Pipe: " << configs->pipe_CV_to_PNav << std::endl;
+    std::cerr << "PNav write to CV Pipe: " << configs->pipe_PNav_to_CV << std::endl;
+    std::cerr << "UART Device Path: " << configs->uart_name << std::endl;
+    std::cerr << "UART baudrate: " << configs->baudrate << std::endl;
+    std::cerr << std::endl;
+    
+    std::cerr << "Mission Parameters:" << std::endl;
+    std::cerr << "Camera Test Mode: " << configs->cam_Test << std::endl;
+    std::cerr << "Camera Test Capture Frequency: " << configs->cap_Freq << std::endl;
+    std::cerr << "Distance Parameter: " << configs->dist << std::endl;
+    std::cerr << "Heading Parameter: " << configs->head << std::endl;
+    std::cerr << "Number of SetPoints: " << configs->npoints << std::endl;
+    std::cerr << "Pattern Enum: " << configs->pattern << std::endl;
+    std::cerr << std::endl;
+    
+    std::cerr << "Camera Parameters: " << std::endl;
+    std::cerr << "Camera Vertical FOV: " << configs->cam_FOV_v << std::endl;
+    std::cerr << "Camera Horizontal FOV: " << configs->cam_FOV_h << std::endl;
+    std::cerr << "Image Width: " << configs->cam_Width << std::endl;
+    std::cerr << "Image Height: " << configs->cam_Height << std::endl;
+    std::cerr << "Video Stabilization: " << configs->video_Stabilization << std::endl;
+    std::cerr << std::endl;
+    
+    std::cerr << "End Configuration" << std::endl;
+    
 }
 
 fileIO::~fileIO() {

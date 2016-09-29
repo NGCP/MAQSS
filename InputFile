@@ -3,26 +3,47 @@
 
 ### Required Inputs
 Version=1.0
-camTest=1
-#cv_pipe=/home/zhangh94/NGCP/MAQSS/build/cv_Pipe
-cv_pipe=/home/pi/NGCP/MAQSS/build/cv_Pipe
-cv_pipe2=/home/pi/NGCP/MAQSS/build/cv_Pipe2
+
+## Pipe Names
+# Pipe for CV to write to PNav (PNav reads from CV)
+pipe_CV_to_PNav=/home/pi/NGCP/MAQSS/build/CV_to_PNav
+
+# Pipe for PNav to write to CV (CV reads from PNav)
+pipe_PNav_to_CV=/home/pi/NGCP/MAQSS/build/PNav_to_CV
+
+# Path to UART Device on RBP
 uart_name=/dev/ttyAMA0
+
+## Cam Test Parameters
+cam_Test=1
+
+# Cam Test Capture Frequency (Hz)
+cap_Freq=0.5
+
 ### End Required Inputs
 
 ### Known Inputs (not required)
 baudrate=57600
-camFOV_v=80
-camFOV_h=90
-npoints=25
+
+## RBP Camera Parameters
+# Camera Field of View Estimate
+cam_FOV_v=80
+cam_FOV_h=90
+video_Stabilization=1
+
+# Cam Test Frame Size
+cam_Width=1920
+cam_Height=1080
+
+## Hardcode Mission Parameters
 dist=50
 head=0
-videoStabilization=1
+npoints=25
 
 # Specify pattern according to pattern enum in waypoints.hpp
 pattern=3
 ## End Known Inputs
 
-# These will be stored into miscParams
-myName=Frank
-Quad=A
+# These will be stored into misc_Params
+my_Name=Frank
+Quad=B

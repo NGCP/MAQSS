@@ -37,6 +37,7 @@ public:
     unsigned int pattern = 999; // flight pattern according to pattern enum in waypoints.hpp. Leave as 999 to let GCS specify
     int head = 999; // compass heading (deg) which can be set from InputFile. Leave as 999 to let GCS specify
     int dist = 0; // distance parameter for mission in meters. Leave as 0 to let GCS specify
+    int alt = 7; // altitude to fly mission at [m]
     
     // Camera Parameters
     unsigned int cam_Width = 1920; // image capture resolution (pixels)
@@ -45,9 +46,9 @@ public:
     int cam_FOV_h = 90; // camera horizontal field of view angle (degrees)
     bool video_Stabilization = true; // sets raspicam videostabilization option
     
-    
     bool cam_Test = false; // set camera to operate in camera test mode (capture numerous images)
     float cap_Freq=0.5; // picture capture rate for cam_Test mode in Hz
+    
     
     std::map<std::string, void*> misc_Params; // store all other input params
 private:

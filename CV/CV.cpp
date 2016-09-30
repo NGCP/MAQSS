@@ -57,6 +57,10 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
     cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
     cam.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+    cam.set(CV_CAP_PROP_BRIGHTNESS, 50.0);
+    cam.set(CV_CAP_PROP_CONTRAST, 50.0);
+    cam.set(CV_CAP_PROP_SATURATION, 50.0);
+    cam.set(CV_CAP_PROP_GAIN, 50.0);
 
     // TODO: Is there support for video_stabilization with Raspicam_CV API?
     //    cam.setISO(0);
@@ -78,7 +82,7 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     int ctr(1);
     std::string done = "Done";
     std::string str = "image";
-    
+
     // capture 5 frames when a start signal is received
     while (true) {
 
@@ -92,9 +96,9 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
             for (ndx = 0; ndx < 5; ndx++) {
                 cam.grab();
                 cam.retrieve(img);
+                cv::cvtColor(img,img, cv::COLOR_RGB2BGR);
                 cv::imwrite(str + std::to_string(ctr) + "_" + std::to_string(ndx) + ".jpg", img);
                 nCaptures++;
-
             }
 
             Cv->writePipe(configs->fd_CV_to_PNav, done);
@@ -130,6 +134,10 @@ int testLoop(processInterface *Cv, configContainer *configs) {
     cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
     cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
     cam.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+    cam.set(CV_CAP_PROP_BRIGHTNESS, 50.0);
+    cam.set(CV_CAP_PROP_CONTRAST, 50.0);
+    cam.set(CV_CAP_PROP_SATURATION, 50.0);
+    cam.set(CV_CAP_PROP_GAIN, 50.0);
 
     // set up camera interface
     //    cam.setISO(0);
@@ -149,7 +157,7 @@ int testLoop(processInterface *Cv, configContainer *configs) {
 
     // start capturing upto MAX_IMGS images
     while (nCaptures < MAX_IMGS) {
-        std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1 / cap_freq  << "/s"  << std::endl;
+        std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1 / cap_freq << "/s" << std::endl;
         cam.grab();
         cam.retrieve(img);
         cv::imwrite(str + std::to_string(nCaptures) + ".jpg", img);

@@ -67,8 +67,6 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     // Setup Autopilot interface
     Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
     Autopilot_Interface autopilot_interface(&serial_port);
-    serial_port.start();
-    autopilot_interface.start();
 
     // Setup interrupt handlers so all interfaces get closed
     serial_port_quit = &serial_port;
@@ -78,6 +76,15 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     signal(SIGINT, quit_handler);
 
     // Setup GCS interface
+    if (configs->cam_Test) {
+        std::cerr << "Camera test mode, PNav idling" << std::endl;
+        while (true);
+    }
+
+    serial_port.start();
+    autopilot_interface.start();
+
+
 
     // TODO: figure out how to orient northwards (point quad north first)
 
@@ -88,7 +95,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     mavlink_set_position_target_local_ned_t sp;
     mavlink_set_position_target_local_ned_t ip = autopilot_interface.initial_position;
     mavlink_local_position_ned_t lpos;
-//    mavlink_position_target_local_ned_t tpos;
+    //    mavlink_position_target_local_ned_t tpos;
 
     int alt(7);
     int setTolerance = 2;
@@ -99,9 +106,10 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     coord startCoord = {ip.x, ip.y, ip.z - alt};
     int pattern(0);
-    
+
     if (configs->pattern != 999) pattern = configs->pattern;
-    else {} // let GCS specify
+    else {
+    } // let GCS specify
 
     // Fly InputFile mission if specified
     if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern);
@@ -115,26 +123,26 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
         autopilot_interface.update_setpoint(sp);
         setPointReached = false;
 
-        PNav->writePipe(configs->cv_fd2, cv_msg);
+        PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
         std::cerr << ndx + 1 << ", " << searchChunk.wps[ndx][0] << ", " << searchChunk.wps[ndx][1] << ", " << searchChunk.wps[ndx][2] << "; " << std::endl;
         while (!setPointReached) {
 
-//            tpos = autopilot_interface.current_messages.position_target_local_ned;
-//            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
-//            if (abs(tpos.x - sp.x) < setTolerance && abs(tpos.y - sp.y) < setTolerance && abs(tpos.z - sp.z) < setTolerance) {
-//                setPointReached = true;
-//                break;
-//            }
-                        lpos = autopilot_interface.current_messages.local_position_ned;
-                        if (abs(lpos.x - sp.x) < setTolerance && abs(lpos.y - sp.y) < setTolerance && abs(lpos.z - sp.z) < setTolerance) {
-                            setPointReached = true;
-                            break;
-                        }
-                        ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
+            //            tpos = autopilot_interface.current_messages.position_target_local_ned;
+            //            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
+            //            if (abs(tpos.x - sp.x) < setTolerance && abs(tpos.y - sp.y) < setTolerance && abs(tpos.z - sp.z) < setTolerance) {
+            //                setPointReached = true;
+            //                break;
+            //            }
+            lpos = autopilot_interface.current_messages.local_position_ned;
+            if (abs(lpos.x - sp.x) < setTolerance && abs(lpos.y - sp.y) < setTolerance && abs(lpos.z - sp.z) < setTolerance) {
+                setPointReached = true;
+                break;
+            }
+            ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
         }
         std::cerr << "Waiting for msg from Cv" << std::endl;
-        while (!read(configs->cv_fd, tmp, BUF_LEN)) {
+        while (!read(configs->fd_CV_to_PNav, tmp, BUF_LEN)) {
         }
         std::cerr << "Read msg from Cv: " << tmp << std::endl;
     }
@@ -142,7 +150,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     std::cerr << "plot(sp(:,2),sp(:,3),'-x')\nhold all\n axis equal\ngrid on\nplot(sp(1,2),sp(1,3),'or')" << std::endl;
 
     cv_msg = "Exit";
-    PNav->writePipe(configs->cv_fd2, cv_msg);
+    PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
     // switch through (read from CV, check setpoint, check GCS comms, write GPS to GCS if past 1s)
     //    while (1)
@@ -182,11 +190,10 @@ int main(int argc, char** argv) {
         std::cerr << "Must specify command line arguments" << std::endl;
         exit(1); // TODO: Perform closeout/ clean up function when exiting
     }
-    std::cerr << "Got All Configs" << std::endl;
     processInterface PNav(&configs, PNAV);
-
-    std::cerr << "Setup PNav" << std::endl;
+    fileIO::printConfig(&configs);
     mainLoop(&PNav, &configs);
+
     PNav.cleanup(&configs);
 
     return 0;

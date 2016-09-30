@@ -32,7 +32,6 @@ public:
 
     int openPipe(std::string pipeName, int opts);
     void writePipe(int fd, std::string msg);
-    static void printConfig(configContainer *configs);
     void printHelp();
     void cleanup(configContainer *configs);
  

@@ -90,8 +90,7 @@ configContainer fileIO::getConfig(int argc, char** argv) {
             } else if (!strcmp(tmpChars, "uart_name")) {
                 ctr++;
                 configs.uart_name = strtok(NULL, " \n");
-            }
-                // Known config params but not required
+            }                // Known config params but not required
             else if (!strcmp(tmpChars, "baudrate")) configs.baudrate = std::stoi(strtok(NULL, " \n"));
 
             else if (!strcmp(tmpChars, "cam_FOV_v")) configs.cam_FOV_v = std::stoi(strtok(NULL, " \n"));
@@ -117,6 +116,10 @@ configContainer fileIO::getConfig(int argc, char** argv) {
             else if (!strcmp(tmpChars, "cam_Width")) configs.cam_Width = std::stoi(strtok(NULL, " \n"));
 
             else if (!strcmp(tmpChars, "cam_Height")) configs.cam_Height = std::stoi(strtok(NULL, " \n"));
+
+            else if (!strcmp(tmpChars, "log")) configs.log = (std::stoi(strtok(NULL, " \n")) ? true : false);
+
+            else if (!strcmp(tmpChars, "log_freq")) configs.log_freq = std::stof(strtok(NULL, " \n"));
 
                 // Misc config params
             else {

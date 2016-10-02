@@ -7,6 +7,7 @@
 #include <vector>
 #include <cmath>
 #include <ctime>
+#include <chrono>
 
 // C headers
 #include <fcntl.h>
@@ -24,6 +25,7 @@
 #include "waypoints.hpp"
 #include "autopilot_interface.h"
 #include "serial_port.h"
+#include "flight_logger.hpp"
 
 // TODO: Have karthik fix my makefile
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
@@ -64,6 +66,9 @@ void quit_handler(int sig) {
 }
 
 int mainLoop(processInterface *PNav, configContainer *configs) {
+    
+    using namespace std::chrono;
+    
     // Declare variables
     bool set_point_reached = false;
     unsigned int ndx(0);
@@ -83,8 +88,12 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     // declare variables for mavlink messages
     mavlink_set_position_target_local_ned_t sp;
     mavlink_set_position_target_local_ned_t ip;
-        mavlink_local_position_ned_t lpos;
-//    mavlink_position_target_local_ned_t tpos;
+    mavlink_local_position_ned_t lpos;
+    //    mavlink_position_target_local_ned_t tpos;
+    
+    // start timer for logging
+    steady_clock::time_point t0, t1; 
+    flight_logger flt_log;
 
     // Setup interrupt handlers so all interfaces get closed
     serial_port_quit = &serial_port;
@@ -122,6 +131,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     std::cerr << "Begin Streaming setpoints:" << std::endl;
     std::cerr << "sp = [" << std::endl;
     for (ndx = 0; ndx < searchChunk.wps.size(); ndx++) {
+        t0 = steady_clock::now();
         set_position(searchChunk.wps[ndx][0], searchChunk.wps[ndx][1], searchChunk.wps[ndx][2], sp);
         autopilot_interface.update_setpoint(sp);
         set_point_reached = false;
@@ -131,13 +141,13 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
         std::cerr << ndx + 1 << ", " << searchChunk.wps[ndx][0] << ", " << searchChunk.wps[ndx][1] << ", " << searchChunk.wps[ndx][2] << "; " << std::endl;
         while (!set_point_reached) {
 
-//            tpos = autopilot_interface.current_messages.position_target_local_ned;
-//            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
-//            sleep(1);
-//            if (abs(tpos.x - sp.x) < set_tolerance && abs(tpos.y - sp.y) < set_tolerance && abs(tpos.z - sp.z) < set_tolerance) {
-//                set_point_reached = true;
-//                break;
-//            }
+            //            tpos = autopilot_interface.current_messages.position_target_local_ned;
+            //            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
+            //            sleep(1);
+            //            if (abs(tpos.x - sp.x) < set_tolerance && abs(tpos.y - sp.y) < set_tolerance && abs(tpos.z - sp.z) < set_tolerance) {
+            //                set_point_reached = true;
+            //                break;
+            //            }
 
             lpos = autopilot_interface.current_messages.local_position_ned;
             //            std::cerr << "LPos"
@@ -148,7 +158,13 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
                 set_point_reached = true;
                 break;
             }
-
+            
+            // Check timer to log data
+            t1 = steady_clock::now();
+            if (configs->log && (((duration_cast<milliseconds>(t1 - t0).count()) > (1/configs->log_freq) * 1000))) {
+                flt_log.log(&autopilot_interface.current_messages);
+                t0 = steady_clock::now();
+            }
             ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
         }
         std::cerr << "Waiting for msg from Cv" << std::endl;

@@ -14,12 +14,6 @@ pipe_PNav_to_CV=/home/pi/NGCP/MAQSS/build/PNav_to_CV
 # Path to UART Device on RBP
 uart_name=/dev/ttyAMA0
 
-## Cam Test Parameters
-cam_Test=0
-
-# Cam Test Capture Frequency (Hz)
-cap_Freq=0.5
-
 ### End Required Inputs
 
 ### Known Inputs (not required)
@@ -35,11 +29,21 @@ video_Stabilization=1
 cam_Width=1280
 cam_Height=720
 
+## Cam Test Parameters
+cam_Test=0
+
+# Cam Test Capture Frequency (Hz)
+cap_Freq=0.5
+
 ## Hardcode Mission Parameters
 dist=40
 head=0
 npoints=20
 alt=7
+
+## Logging 
+log=1
+log_freq=2
 
 # Specify pattern according to pattern enum in waypoints.hpp
 #enum pattern {

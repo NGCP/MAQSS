@@ -6,13 +6,13 @@ MAVLINK_DIR=/home/pi/NGCP/MAQSS/Resources/mavlink/
 
 CXX=g++
 CXXFLAGS=-std=c++11 -Wall -O3 -I$(PNAV_DIR) -I$(RESOURCES_DIR) -I$(CV_DIR) -I$(MAVLINK_DIR)
-SHARED_SRC=$(RESOURCES_DIR)processInterface.cpp $(PNAV_DIR)serial_port.cpp $(PNAV_DIR)autopilot_interface.cpp $(RESOURCES_DIR)waypoints.cpp $(RESOURCES_DIR)fileIO.cpp
-LIBS=-I/usr/local/include -lraspicam -lraspicam_cv -L/opt/vc/lib -lmmal -lmmal_core -lmmal_util -I. -lpthread -fms-extensions 
+SHARED_SRC=$(RESOURCES_DIR)processInterface.cpp $(PNAV_DIR)serial_port.cpp $(PNAV_DIR)autopilot_interface.cpp $(RESOURCES_DIR)waypoints.cpp $(RESOURCES_DIR)fileIO.cpp $(PNAV_DIR)flight_logger.cpp
+LIBS=-I/usr/local/include -lraspicam -lraspicam_cv -L/opt/vc/lib -lmmal -lmmal_core -lmmal_util -I. -lpthread -fms-extensions
 CV_LIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 all: PNav CV
 
-PNav: $(PNAV_DIR)PNav.cpp $(SHARED_SRC)
+PNav: $(PNAV_DIR)PNav.cpp $(SHARED_SRC) 
 	$(CXX) $(CXXFLAGS) -o ./build/PNav $(PNAV_DIR)PNav.cpp $(SHARED_SRC) $(LIBS)
 CV: $(CV_DIR)CV.cpp $(SHARED_SRC)
 	$(CXX) $(CXXFLAGS) -o ./build/CV $(CV_DIR)CV.cpp $(SHARED_SRC) $(LIBS) $(CV_LIBS)

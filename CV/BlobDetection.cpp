@@ -16,6 +16,9 @@ void openFile(cv::Mat& image, std::string& filename) {
 
 void BlobDetector::detect(cv::Mat& image, cv::Mat& output, std::vector<cv::KeyPoint>& keypoints) {
 	cv::SimpleBlobDetector::Params params;
+	cv::Mat blur[3];
+
+	cv::split(image, blur);
 
 	// Color parameters
 	params.filterByColor = FILTER_BY_COLOR;
@@ -38,23 +41,30 @@ void BlobDetector::detect(cv::Mat& image, cv::Mat& output, std::vector<cv::KeyPo
 
 	cv::Ptr<cv::SimpleBlobDetector> detector = cv::SimpleBlobDetector::create(params);
 
-	detector->detect(image, keypoints);
+	cv::medianBlur(blur[INDEX], blur[INDEX], BLUR_INDEX);
 
-	//cv::drawKeypoints(image, keypoints, output, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+	detector->detect(blur[INDEX], keypoints);
+
+	cv::drawKeypoints(blur[INDEX], keypoints, output, cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 }
 
 int main() {
 	std::string filename;
 	cv::Mat image, output;
 
-	filename = "1551.jpeg";
+	filename = FILE_NAME;
 	openFile(image, filename);
+
+	if (image.empty()) {
+		std::cout << "Image was not loaded properly. Exiting" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 	BlobDetector blob;
 	std::vector<cv::KeyPoint> keypoints;
 
 	blob.detect(image, output, keypoints);
-	//cv::imwrite("output.jpeg", output);
+	cv::imwrite(OUTPUT_FILE, output);
 
-	return EXIT_FAILURE;
+	exit (EXIT_SUCCESS);
 }

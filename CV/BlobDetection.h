@@ -14,7 +14,7 @@
 #define INDEX 2
 #define BLUR_INDEX 9
 
-#define MIN_RADIUS 15.0f
+#define MIN_RADIUS 12.0f
 #define MAX_RADIUS 60.0f
 #define EXPONENT 2.0f
 
@@ -25,7 +25,8 @@ public:
 
 private:
 	static const bool FILTER_BY_COLOR = false;
-	static const uchar DEFAULT_COLOR = 255;
+	static const uchar LIGHT_COLORS = 255;
+	static const uchar DARK_COLORS = 0;
 
 	static const bool FILTER_BY_AREA = true;
 	const float MIN_AREA = std::pow(MIN_RADIUS, EXPONENT) * (float) CV_PI;
@@ -40,7 +41,7 @@ private:
 	const float MAX_CONVEXITY = 1.0f;
 
 	static const bool FILTER_BY_INTERTIA = true;
-	const float MIN_INERTIA_RATIO = 0.75f;
+	const float MIN_INERTIA_RATIO = 0.65f;
 	const float MAX_INERTIA_RATIO = 1.0f;
 };
 

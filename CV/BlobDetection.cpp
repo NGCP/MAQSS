@@ -12,6 +12,11 @@
 
 void openFile(cv::Mat& image, std::string& filename) {
 	image = cv::imread(filename, cv::IMREAD_COLOR);
+
+	if (image.empty()) {
+		std::cout << "Image was not loaded properly. Exiting" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 }
 
 void BlobDetector::detect(cv::Mat& image, cv::Mat& output, std::vector<cv::KeyPoint>& keypoints) {
@@ -22,7 +27,7 @@ void BlobDetector::detect(cv::Mat& image, cv::Mat& output, std::vector<cv::KeyPo
 
 	// Color parameters
 	params.filterByColor = FILTER_BY_COLOR;
-	params.blobColor = DEFAULT_COLOR;
+	params.blobColor = LIGHT_COLORS;
 
 	// Area paramters
 	params.filterByArea = FILTER_BY_AREA;
@@ -54,11 +59,6 @@ int main() {
 
 	filename = FILE_NAME;
 	openFile(image, filename);
-
-	if (image.empty()) {
-		std::cout << "Image was not loaded properly. Exiting" << std::endl;
-		exit(EXIT_FAILURE);
-	}
 
 	BlobDetector blob;
 	std::vector<cv::KeyPoint> keypoints;

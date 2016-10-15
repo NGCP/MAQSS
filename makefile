@@ -6,15 +6,25 @@ MAVLINK_DIR=$(CURDIR)/Resources/
 BUILD_DIR=$(CURDIR)/build/
 
 
+
 CXX=g++
 CXXFLAGS=-std=c++11 -Wall -O3 
 LINK_FLAGS=-I$(PNAV_DIR) -I$(RESOURCES_DIR) -I$(CV_DIR) -I$(MAVLINK_DIR)
 SHARED_SRC=$(RESOURCES_DIR)processInterface.cpp $(PNAV_DIR)serial_port.cpp $(PNAV_DIR)autopilot_interface.cpp $(RESOURCES_DIR)waypoints.cpp $(RESOURCES_DIR)fileIO.cpp $(PNAV_DIR)flight_logger.cpp
 PNAV_LIBS=-I/usr/local/include -lpthread -fms-extensions
 CV_LIBS=-I/usr/local/include -lraspicam -lraspicam_cv -L/opt/vc/lib -lmmal -lmmal_core -lmmal_util -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lpthread
+CV_FLAGS=$(CXXFLAGS)
 
 SHARED_O_TARGETS= processInterface.o serial_port.o autopilot_interface.o waypoints.o fileIO.o flight_logger.o
 SHARED_O=$(RESOURCES_DIR)processInterface.o $(PNAV_DIR)serial_port.o $(PNAV_DIR)autopilot_interface.o $(RESOURCES_DIR)waypoints.o $(RESOURCES_DIR)fileIO.o $(PNAV_DIR)flight_logger.o
+
+ifdef DEBUG
+	CV_FLAGS+=-DDEBUG
+endif
+
+ifdef TEST
+	CV_FLAGS+=-DTEST
+endif
 
 all : PNav CV
 	
@@ -30,7 +40,7 @@ $(PNAV_DIR)PNav.o :
 	$(CXX) $(CXXFLAGS) -c $(PNAV_DIR)PNav.cpp -o $(PNAV_DIR)PNav.o $(LINK_FLAGS)
 
 $(CV_DIR)CV.o : 
-	$(CXX) $(CXXFLAGS) -c $(CV_DIR)CV.cpp -o $(CV_DIR)/CV.o $(LINK_FLAGS)
+	$(CXX) $(CV_FLAGS) -c $(CV_DIR)CV.cpp -o $(CV_DIR)/CV.o $(LINK_FLAGS)
 
 $(RESOURCES_DIR)processInterface.o : 
 	$(CXX) $(CXXFLAGS) -c $(RESOURCES_DIR)processInterface.cpp -o $(RESOURCES_DIR)processInterface.o

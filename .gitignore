@@ -1,0 +1,13 @@
+# Ignore this file
+.gitignore
+# Logs
+*.log
+
+# Images
+*.jpg
+
+# Files
+CV/BlobDetection.*
+Resources/*
+Pictures/*
+PNav/*

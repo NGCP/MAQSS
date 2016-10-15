@@ -14,4 +14,7 @@
 #define EXIT_STR "Exit"
 #define DONE_STR "Done"
 
+// CV definitions
+#define RED 2
+
 #endif

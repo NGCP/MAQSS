@@ -48,13 +48,13 @@ void quit_handler(int signal) {
 
 static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
 
-    cam.set(cv::CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
-    cam.set(cv::CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
-    cam.set(cv::CV_CAP_PROP_FORMAT, cv::CV_8UC3);
-    cam.set(cv::CV_CAP_PROP_BRIGHTNESS, BRIGHTNESS);
-    cam.set(cv::CV_CAP_PROP_CONTRAST, CONTRAST);
-    cam.set(cv::CV_CAP_PROP_SATURATION, SATURATION);
-    cam.set(cv::CV_CAP_PROP_GAIN, GAIN);
+    cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
+    cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
+    cam.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+    cam.set(CV_CAP_PROP_BRIGHTNESS, BRIGHTNESS);
+    cam.set(CV_CAP_PROP_CONTRAST, CONTRAST);
+    cam.set(CV_CAP_PROP_SATURATION, SATURATION);
+    cam.set(CV_CAP_PROP_GAIN, GAIN);
 
     if (!cam.open()) {
         fprintf(stderr, "\nCamera has not been opened. Exiting...\n");
@@ -65,27 +65,37 @@ static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
     sleep(2);
 }
 
-static void detectBall(cv::Mat& image, cv::Mat& output, std::vector<cv::Vecsf>& circles) {
+static void detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
     cv::Mat channels[3];
     bool drawCircles;
     size_t i;
+    clock_t t;
 
     #ifdef DEBUG
         drawCircles = true;
-    #elif
+    #else
         drawCircles = false;
     #endif
+
+    t = clock();
+
+    // Resize the image to a quarter of its original dimensions
+    cv::resize(iamge, image, cv::Size(), 0.25, 0.25 cv::INTER_LINEAR);
 
     // Split the image into 3 channels: red, green, and blue
     cv::split(image, channels);
 
     // Threshold the image, keeping frames that are closer to white (a value of 255)
-    cv::threshold(channels[0], output, 155, 255, cv::THRESH_BINARY);
+    cv::threshold(split[RED], output, 155, 255, cv::THRESH_BINARY);
     // Apply a Guassian Blur to smooth out the edges of the image
-    cv::GaussianBlur(output, output, cv::Size(7, 7,), 8, 8);
+    cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
     // Use a Hough Transform to find the circles, and store their coordinates relative
     // to the frame in a 3-D vector formatted as (x, y, radius)
     cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 1.0, output.rows/4, 100, 10, 0, 0);
+
+    t = clock() - t;
+
+    fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float)t)/CLOCKS_PER_SEC);
 
     // If we want to, draw the circles (mostly for debugging purposes)
     if (drawCircles) {
@@ -103,30 +113,42 @@ static void detectBall(cv::Mat& image, cv::Mat& output, std::vector<cv::Vecsf>& 
     }
 }
 
-static void grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaputres, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
-    int i;
+static void grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& ctr, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
+    int index;
     std::string imageHeader;
 
     
     imageHeader = "image";
 
-    for (i = 0; i < 5; i++) {
+    #ifdef TEST
+        cam.grab();
+   	cam.retrieve(image);
+	
+	detectBall(nCaptures, image, output, circles);
+	
+	cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
+
+        ctr++;
+	nCaptures++;
+    #else
+    	for (index = 0; index < 5; index++) {
         
-	cam.grab();
-	cam.retrieve(image);
+	    cam.grab();
+	    cam.retrieve(image);
 
-        detectBall(image, output, circles, drawCircles);
+            detectBall(nCaptures, image, output, circles);
 
-	cv::imwrite(str + std::to_string(ctr) + "_" + std::to_string(ndx) + ".jpg", img);
-        nCaptures++;
-    }
+	    cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
+
+            nCaptures++;
+        }
+    #endif
 }
 
 void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *configs) {
-    bool grabFrame;
+    bool nextFrame;
     char grabMsg[BUF_LEN];
     int ctr;
-    int message;
 
     raspicam::RaspiCam_Cv cam;
     cv::Mat image, output;
@@ -139,45 +161,44 @@ void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *c
     signal(SIGINT, quit_handler);
 
     // Setup camera interface
-    setupCamera(cam, &configs);
+    setupCamera(cam, configs);
 
-    grabFrame = true;
+    nextFrame = true;
     ctr = 1;
 
-    while (grabFrame) {
+    while (nextFrame) {
        
         read(configs->fd_PNav_to_CV, grabMsg, BUF_LEN);
         fprintf(stderr, "Read message from PNav: %s\n", grabMsg);
         sleep(1);
 
-        message
-
         if (!strcmp(grabMsg, START_STR)) {
 
-            grabFrame(cam, image, output, circles);
+            grabFrame(cam, nCaptures, ctr, image, output, circles);
             Cv->writePipe(configs->fd_CV_to_PNav, DONE_STR);
             ctr++;
         }
-	else if (!strcmp(getMsg, EXIT_STR)) {
+	else if (!strcmp(grabMsg, EXIT_STR)) {
             
-	    can.release();
+	    cam.release();
 	    Cv->cleanup(configs);
 	    exit(EXIT_SUCCESS);
 	}
         
-	grabframe = nCaptures > MAX_IMGS ? false : true;
+	nextFrame = nCaptures > MAX_IMGS ? false : true;
     }
 }
 
 // Run CV process in test mode to continually take up to 2000 images
-void testLoop(processInterface *Cv, configContainer *configs) {
+void testLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *configs) {
+    int ctr;
 
     raspicam::RaspiCam_Cv cam;
-    //    unsigned char *data = new unsigned char[ cam.getImageBufferSize()];
-    cv::Mat img;
+    // unsigned char *data = new unsigned char[ cam.getImageBufferSize()];
+    cv::Mat image, output;
+    std::vector<cv::Vec3f> circles;
 
     float cap_freq = configs->cap_Freq;
-    std::string str = "image";
 
     // Setup interrupt handlers so all interfaces get closed
     Cv_quit = Cv;
@@ -186,16 +207,16 @@ void testLoop(processInterface *Cv, configContainer *configs) {
     signal(SIGINT, quit_handler);
 
     // set up camera interfac
-    setupCamera(cam, &configs);
+    setupCamera(cam, configs);
 
+    ctr = 1;
 
     // start capturing upto MAX_IMGS images
     while (nCaptures < MAX_IMGS) {
         std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1 / cap_freq << "/s" << std::endl;
-        cam.grab();
-        cam.retrieve(img);
-        cv::imwrite(str + std::to_string(nCaptures) + ".jpg", img);
-        nCaptures++;
+
+        grabFrame(cam, nCaptures, ctr, image, output, circles);
+
         sleep(1.0 / cap_freq);
     }
 }

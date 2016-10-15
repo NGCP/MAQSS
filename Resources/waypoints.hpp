@@ -21,6 +21,7 @@ enum pattern {
     FIG8,
     RACETRACK,
     RACETRACK_WIDE,
+    CAM_ALTITUDE_TEST,
     
     NUM_PATTERNS
     

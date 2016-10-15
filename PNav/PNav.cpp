@@ -7,6 +7,7 @@
 #include <vector>
 #include <cmath>
 #include <ctime>
+#include <chrono>
 
 // C headers
 #include <fcntl.h>
@@ -24,6 +25,7 @@
 #include "waypoints.hpp"
 #include "autopilot_interface.h"
 #include "serial_port.h"
+#include "flight_logger.hpp"
 
 // TODO: Have karthik fix my makefile
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
@@ -64,9 +66,34 @@ void quit_handler(int sig) {
 }
 
 int mainLoop(processInterface *PNav, configContainer *configs) {
+    
+    using namespace std::chrono;
+    
+    // Declare variables
+    bool set_point_reached = false;
+    unsigned int ndx(0);
+    int set_tolerance = 3;
+    int pattern(0);
+    char tmp[BUF_LEN];
+    coord startCoord;
+    std::string cv_msg = "Start";
+
     // Setup Autopilot interface
     Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
     Autopilot_Interface autopilot_interface(&serial_port);
+
+    // instantiate a waypoints class
+    waypoints searchChunk(configs);
+
+    // declare variables for mavlink messages
+    mavlink_set_position_target_local_ned_t sp;
+    mavlink_set_position_target_local_ned_t ip;
+    mavlink_local_position_ned_t lpos;
+    //    mavlink_position_target_local_ned_t tpos;
+    
+    // start timer for logging
+    steady_clock::time_point t0, t1; 
+    flight_logger flt_log;
 
     // Setup interrupt handlers so all interfaces get closed
     serial_port_quit = &serial_port;
@@ -81,32 +108,15 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
         while (true);
     }
 
+    //  Start interface and take initial position
     serial_port.start();
     autopilot_interface.start();
-
-
+    ip = autopilot_interface.initial_position;
+    startCoord = {ip.x, ip.y, ip.z - configs->alt};
 
     // TODO: figure out how to orient northwards (point quad north first)
 
-    // instantiate a waypoints class
-    waypoints searchChunk(configs);
-    // maybe instantiate a mission class (store start/stop command, waypoint class? etc.)
-
-    mavlink_set_position_target_local_ned_t sp;
-    mavlink_set_position_target_local_ned_t ip = autopilot_interface.initial_position;
-    mavlink_local_position_ned_t lpos;
-    //    mavlink_position_target_local_ned_t tpos;
-
-    int alt(7);
-    int setTolerance = 2;
-    unsigned int ndx(0);
-    bool setPointReached = false;
-    std::string cv_msg = "Start";
-    char tmp[BUF_LEN];
-
-    coord startCoord = {ip.x, ip.y, ip.z - alt};
-    int pattern(0);
-
+    // Fly InputFile pattern if specified
     if (configs->pattern != 999) pattern = configs->pattern;
     else {
     } // let GCS specify
@@ -115,29 +125,45 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern);
     else searchChunk.setWps(startCoord, 330, 50, FIG8);
 
+    if (pattern == CAM_ALTITUDE_TEST) set_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
+
     std::cerr << "Current IP: [" << ip.x << ", " << ip.y << "," << ip.z << "]" << std::endl;
     std::cerr << "Begin Streaming setpoints:" << std::endl;
     std::cerr << "sp = [" << std::endl;
     for (ndx = 0; ndx < searchChunk.wps.size(); ndx++) {
+        t0 = steady_clock::now();
         set_position(searchChunk.wps[ndx][0], searchChunk.wps[ndx][1], searchChunk.wps[ndx][2], sp);
         autopilot_interface.update_setpoint(sp);
-        setPointReached = false;
+        set_point_reached = false;
 
         PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
         std::cerr << ndx + 1 << ", " << searchChunk.wps[ndx][0] << ", " << searchChunk.wps[ndx][1] << ", " << searchChunk.wps[ndx][2] << "; " << std::endl;
-        while (!setPointReached) {
+        while (!set_point_reached) {
 
             //            tpos = autopilot_interface.current_messages.position_target_local_ned;
             //            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
-            //            if (abs(tpos.x - sp.x) < setTolerance && abs(tpos.y - sp.y) < setTolerance && abs(tpos.z - sp.z) < setTolerance) {
-            //                setPointReached = true;
+            //            sleep(1);
+            //            if (abs(tpos.x - sp.x) < set_tolerance && abs(tpos.y - sp.y) < set_tolerance && abs(tpos.z - sp.z) < set_tolerance) {
+            //                set_point_reached = true;
             //                break;
             //            }
+
             lpos = autopilot_interface.current_messages.local_position_ned;
-            if (abs(lpos.x - sp.x) < setTolerance && abs(lpos.y - sp.y) < setTolerance && abs(lpos.z - sp.z) < setTolerance) {
-                setPointReached = true;
+            //            std::cerr << "LPos"
+            //            if (abs(lpos.x - sp.x) < setTolerance && abs(lpos.y - sp.y) < setTolerance && abs(lpos.z - sp.z) < setTolerance) {
+
+            // TODO: See if removing Z tolerance helps
+            if (abs(lpos.x - sp.x) < set_tolerance && abs(lpos.y - sp.y) < set_tolerance) {
+                set_point_reached = true;
                 break;
+            }
+            
+            // Check timer to log data
+            t1 = steady_clock::now();
+            if (configs->log && (((duration_cast<milliseconds>(t1 - t0).count()) > (1/configs->log_freq) * 1000))) {
+                flt_log.log(&autopilot_interface.current_messages);
+                t0 = steady_clock::now();
             }
             ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
         }

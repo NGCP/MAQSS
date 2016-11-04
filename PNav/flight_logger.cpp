@@ -43,7 +43,7 @@ void flight_logger::log(Mavlink_Messages *msgs) {
     // TODO: MAKE THIS LOOK NICER
     t = steady_clock::now();
     // Figure out how to put time in there
-    flt_log << ndx++ << ",\t" << duration_cast<milliseconds>(t - t0).count() << ",\t" <<msgs ->local_position_ned.x << ",\t" << msgs->local_position_ned.y << ",\t" << msgs->local_position_ned.z << ",\t" << 
+    flt_log << ndx++ << ", \t" << duration_cast<milliseconds>(t - t0).count() << ", \t" <<msgs ->local_position_ned.x << ",\t" << msgs->local_position_ned.y << ",\t" << msgs->local_position_ned.z << ",\t" << 
             msgs->position_target_local_ned.x << ",\t" << msgs->position_target_local_ned.y << ",\t" <<  msgs->position_target_local_ned.z << ",\t" << 
             msgs->global_position_int.lat << ",\t" << msgs->global_position_int.lon << ",\t" <<  
             msgs->global_position_int.alt << ",\t" <<  (float)(msgs->global_position_int.hdg)/100  << std::endl;

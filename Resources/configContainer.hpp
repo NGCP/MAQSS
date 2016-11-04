@@ -16,7 +16,9 @@
 
 #include <string>
 #include <map>
+#include <Eigen/Dense>
 
+using namespace Eigen;
 class configContainer {
 public:
     configContainer() {}
@@ -50,6 +52,14 @@ public:
     
     bool cam_Test = false; // set camera to operate in camera test mode (capture numerous images)
     float cap_Freq=0.5; // picture capture rate for cam_Test mode in Hz
+    
+    // LocalNED parameters
+    // TODO: Handle case if origin location gets corrupted
+    bool originSet = false;
+    Vector3d originECEF;
+    Vector3d originLLA;
+    Matrix3d Rne; // ECEF to LocalNED rotation matrix
+    Matrix3d Rne_transpose; // LocalNED to ECEF rotation matrix
     
     std::map<std::string, void*> misc_Params; // store all other input params
 private:

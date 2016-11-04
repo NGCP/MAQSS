@@ -62,12 +62,6 @@ int mainLoop(processInterface *Cv, configContainer *configs) {
     cam.set(CV_CAP_PROP_SATURATION, 50.0);
     cam.set(CV_CAP_PROP_GAIN, 50.0);
 
-    // TODO: Is there support for video_stabilization with Raspicam_CV API?
-    //    cam.setISO(0);
-    //    cam.setExposureCompensation(0);
-    //    cam.setFormat(raspicam::RASPICAM_FORMAT_BGR); // FORMAT MUST BE BGR or colors will be reversed
-    //    cam.setVideoStabilization(configs->video_Stabilization);
-
     if (!cam.open()) {
         std::cerr << "Error opening camera" << std::endl;
         exit(1);

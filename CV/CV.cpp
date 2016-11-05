@@ -33,7 +33,6 @@ processInterface *Cv_quit;
 configContainer *configs_quit;
 raspicam::RaspiCam_Cv *cam_quit;
 
-
 void quit_handler(int signal) {
 
     printf("\nTERMINATING AT USER REQUEST\n\n");
@@ -58,8 +57,8 @@ static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
 
     if (!cam.open()) {
         fprintf(stderr, "\nCamera has not been opened. Exiting...\n");
-	throw std::runtime_error("Camera failed to open.\n");
-	exit(EXIT_FAILURE);
+        throw std::runtime_error("Camera failed to open.\n");
+        exit(EXIT_FAILURE);
     }
 
     sleep(2);
@@ -71,45 +70,45 @@ static void detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
     size_t i;
     clock_t t;
 
-    #ifdef DEBUG
-        drawCircles = true;
-    #else
-        drawCircles = false;
-    #endif
+#ifdef DEBUG
+    drawCircles = true;
+#else
+    drawCircles = false;
+#endif
 
     t = clock();
 
     // Resize the image to a quarter of its original dimensions
-    cv::resize(iamge, image, cv::Size(), 0.25, 0.25 cv::INTER_LINEAR);
-
+    cv::resize(image, image, cv::Size(), 0.25, 0.25, cv::INTER_LINEAR);
+    
     // Split the image into 3 channels: red, green, and blue
     cv::split(image, channels);
 
     // Threshold the image, keeping frames that are closer to white (a value of 255)
-    cv::threshold(split[RED], output, 155, 255, cv::THRESH_BINARY);
+    cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
     // Apply a Guassian Blur to smooth out the edges of the image
     cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
     // Use a Hough Transform to find the circles, and store their coordinates relative
     // to the frame in a 3-D vector formatted as (x, y, radius)
-    cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 1.0, output.rows/4, 100, 10, 0, 0);
+    cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 1.0, output.rows / 4, 100, 10, 0, 0);
 
     t = clock() - t;
 
-    fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float)t)/CLOCKS_PER_SEC);
+    fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float) t) / CLOCKS_PER_SEC);
 
     // If we want to, draw the circles (mostly for debugging purposes)
     if (drawCircles) {
 
-	for (i = 0; i < circles.size(); i++) {
+        for (i = 0; i < circles.size(); i++) {
             int radius;
 
-	    cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-	    radius = cvRound(circles[i][2]);
-	    // Draw the circle center
-	    cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
-	    // Draw the circle outline
-	    cv::circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
-	}
+            cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+            radius = cvRound(circles[i][2]);
+            // Draw the circle center
+            cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+            // Draw the circle outline
+            cv::circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+        }
     }
 }
 
@@ -117,32 +116,31 @@ static void grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& 
     int index;
     std::string imageHeader;
 
-    
     imageHeader = "image";
 
-    #ifdef TEST
+#ifdef TEST
+    cam.grab();
+    cam.retrieve(image);
+
+    detectBall(nCaptures, image, output, circles);
+
+    cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
+
+    ctr++;
+    nCaptures++;
+#else
+    for (index = 0; index < 5; index++) {
+
         cam.grab();
-   	cam.retrieve(image);
-	
-	detectBall(nCaptures, image, output, circles);
-	
-	cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
+        cam.retrieve(image);
 
-        ctr++;
-	nCaptures++;
-    #else
-    	for (index = 0; index < 5; index++) {
-        
-	    cam.grab();
-	    cam.retrieve(image);
+        detectBall(nCaptures, image, output, circles);
 
-            detectBall(nCaptures, image, output, circles);
+        cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
 
-	    cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
-
-            nCaptures++;
-        }
-    #endif
+        nCaptures++;
+    }
+#endif
 }
 
 void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *configs) {
@@ -167,7 +165,7 @@ void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *c
     ctr = 1;
 
     while (nextFrame) {
-       
+
         read(configs->fd_PNav_to_CV, grabMsg, BUF_LEN);
         fprintf(stderr, "Read message from PNav: %s\n", grabMsg);
         sleep(1);
@@ -177,24 +175,23 @@ void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *c
             grabFrame(cam, nCaptures, ctr, image, output, circles);
             Cv->writePipe(configs->fd_CV_to_PNav, DONE_STR);
             ctr++;
+        } else if (!strcmp(grabMsg, EXIT_STR)) {
+
+            cam.release();
+            Cv->cleanup(configs);
+            exit(EXIT_SUCCESS);
         }
-	else if (!strcmp(grabMsg, EXIT_STR)) {
-            
-	    cam.release();
-	    Cv->cleanup(configs);
-	    exit(EXIT_SUCCESS);
-	}
-        
-	nextFrame = nCaptures > MAX_IMGS ? false : true;
+
+        nextFrame = nCaptures > MAX_IMGS ? false : true;
     }
 }
 
 // Run CV process in test mode to continually take up to 2000 images
+
 void testLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *configs) {
     int ctr;
 
     raspicam::RaspiCam_Cv cam;
-    // unsigned char *data = new unsigned char[ cam.getImageBufferSize()];
     cv::Mat image, output;
     std::vector<cv::Vec3f> circles;
 
@@ -206,7 +203,7 @@ void testLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *co
     cam_quit = &cam;
     signal(SIGINT, quit_handler);
 
-    // set up camera interfac
+    // set up camera interface
     setupCamera(cam, configs);
 
     ctr = 1;
@@ -231,7 +228,7 @@ int main(int argc, char** argv) {
         // TODO: Add a print help function and figure out where to put it
         std::cerr << "Must specify command line arguments" << std::endl;
         exit(EXIT_FAILURE);
-	// TODO: Perform closeout / clean up function when exiting
+        // TODO: Perform closeout / clean up function when exiting
     }
 
     processInterface Cv(&configs, CV);

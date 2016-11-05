@@ -66,16 +66,16 @@ void quit_handler(int sig) {
 }
 
 int mainLoop(processInterface *PNav, configContainer *configs) {
-    
+
     using namespace std::chrono;
-    
+
     // Declare variables
     bool set_point_reached = false;
     unsigned int ndx(0);
     int set_tolerance = 3;
     int pattern(0);
     char tmp[BUF_LEN];
-    coord startCoord;
+    coordLocalNED startCoord;
     std::string cv_msg = "Start";
 
     // Setup Autopilot interface
@@ -89,10 +89,11 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     mavlink_set_position_target_local_ned_t sp;
     mavlink_set_position_target_local_ned_t ip;
     mavlink_local_position_ned_t lpos;
+    Mavlink_Messages msgs;
     //    mavlink_position_target_local_ned_t tpos;
-    
+
     // start timer for logging
-    steady_clock::time_point t0, t1; 
+    steady_clock::time_point t0, t1;
     flight_logger flt_log;
 
     // Setup interrupt handlers so all interfaces get closed
@@ -112,18 +113,25 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     serial_port.start();
     autopilot_interface.start();
     ip = autopilot_interface.initial_position;
-    startCoord = {ip.x, ip.y, ip.z - configs->alt};
+    startCoord << ip.x, ip.y, ip.z - configs->alt;
 
-    // TODO: figure out how to orient northwards (point quad north first)
+    // Locate LNED frame origin
+    // TODO: Implement method which checks LNED origin remains constant throughout flight
+    msgs =  autopilot_interface.current_messages;
+    coordLocalNED LNED_0(msgs.local_position_ned.x, msgs.local_position_ned.y, msgs.local_position_ned.z);
+    coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI/180.0, msgs.global_position_int.lon * 1E-7 * M_PI/180.0, msgs.global_position_int.alt * 1E-3);
+    waypoints::findOriginLocalNED(*configs, LNED_0, LLA_0);
 
-    // Fly InputFile pattern if specified
+            //TODO: Write function/method to receive mission data (GPS Start, heading, distance)
+
+            // Fly InputFile pattern if specified
     if (configs->pattern != 999) pattern = configs->pattern;
     else {
     } // let GCS specify
 
     // Fly InputFile mission if specified
-    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern);
-    else searchChunk.setWps(startCoord, 330, 50, FIG8);
+    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern, 139);
+    else searchChunk.setWps(startCoord, 100, 50, RECTANGLE, 139);
 
     if (pattern == CAM_ALTITUDE_TEST) set_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
 
@@ -158,12 +166,15 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
                 set_point_reached = true;
                 break;
             }
-            
+
             // Check timer to log data
             t1 = steady_clock::now();
-            if (configs->log && (((duration_cast<milliseconds>(t1 - t0).count()) > (1/configs->log_freq) * 1000))) {
+            if (configs->log && (((duration_cast<milliseconds>(t1 - t0).count()) > (1 / configs->log_freq) * 1000))) {
                 flt_log.log(&autopilot_interface.current_messages);
                 t0 = steady_clock::now();
+                
+                // capture an image everytime logger is run
+                PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
             }
             ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
         }
@@ -176,7 +187,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     std::cerr << "plot(sp(:,2),sp(:,3),'-x')\nhold all\n axis equal\ngrid on\nplot(sp(1,2),sp(1,3),'or')" << std::endl;
 
     cv_msg = "Exit";
-    PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
+//    PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
     // switch through (read from CV, check setpoint, check GCS comms, write GPS to GCS if past 1s)
     //    while (1)

@@ -13,7 +13,22 @@
 
 #ifndef WAYPOINTS_HPP
 #define WAYPOINTS_HPP
-#include "processInterface.hpp"
+#include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <array>
+#include <fstream>
+#include <cmath>
+#include <Eigen/Dense>
+
+#include "configContainer.hpp"
+
+#define sind(x) (sin((x) * M_PI / 180.0))
+#define cosd(x) (cos((x) * M_PI / 180.0))
+
+using namespace Eigen;
+
 enum pattern {
     RECTANGLE,
     CIRCLE,
@@ -22,24 +37,46 @@ enum pattern {
     RACETRACK,
     RACETRACK_WIDE,
     CAM_ALTITUDE_TEST,
-    
+
     NUM_PATTERNS
-    
 };
 
-// TODO: is coord a vector with 3 elements here?
-typedef std::array<double, 3> coord;
+typedef Vector3d coordLLA; // lat/long/alt in radians and meters
+typedef Vector3d coordECEF; // XYZ in meters 
+typedef Vector3d coordLocalNED; // NED in meters
 
-#define sind(x) (sin((x) * M_PI / 180.0))
-#define cosd(x) (cos((x) * M_PI / 180.0))
+// WGS84 Parameters (constants for coordinate transforms)
+const unsigned int a = 6378137;
+const unsigned int Rearth = 6371000; // [m]
+const double b = 6356752.31424518;
+const double a2 = pow(a, 2.0);
+const double b2 = pow(b, 2.0);
+const double f = 1 / 298.257223563;
+const double e = sqrt((a2 - b2) / a2);
+const double e2 = pow(e, 2.0);
+const double ep = sqrt((a2 - b2) / b2);
+
 class waypoints {
 public:
     waypoints(configContainer *configs);
-    void setWps(coord startCoord, double heading, double length, int pattern=RECTANGLE);
-    void setCurrentWp(int Wp) {currentWp = Wp;}
+    void setWps(coordLocalNED startCoord, int heading, int length, int pattern = RECTANGLE, float fieldHeading = 0.0);
+
+    void setCurrentWp(int Wp) {
+        currentWp = Wp;
+    }
     void plotWp();
-        
-    std::vector<coord> wps;
+
+    // static methods to convert between LLA and LocalNED. ConfigContiner is required because origin information is stored there
+    static coordLocalNED LLAtoLocalNED(configContainer& configs, coordLLA &LLA);
+    static coordLLA LocalNEDtoLLA(configContainer& configs, coordLocalNED &LNED);
+    static coordLocalNED ECEFtoLocalNED(configContainer& configs, coordECEF &ECEF);
+    static coordECEF LocalNEDtoECEF(configContainer& configs, coordLocalNED &LNED);
+    static coordLLA ECEFtoLLA(coordECEF &ECEF);
+    static coordECEF LLAtoECEF(coordLLA &LLA);
+    static void findOriginLocalNED(configContainer& configs, coordLocalNED &LNED, coordLLA &LLA);
+    static coordLLA coordAt(coordLLA &LLA, float bearing, float distance);
+
+    std::vector<coordLocalNED> wps;
 
     virtual ~waypoints();
 private:

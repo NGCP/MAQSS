@@ -37,7 +37,7 @@ cap_Freq=0.5
 
 ## Hardcode Mission Parameters
 dist=40
-head=0
+head=92
 npoints=20
 alt=7
 
@@ -57,9 +57,9 @@ log_freq=2
 #    
 #    NUM_PATTERNS
 #};
-pattern=3
+pattern=0
 ## End Known Inputs
 
 # These will be stored into misc_Params
 my_Name=Frank
-Quad=B
+Quad=A

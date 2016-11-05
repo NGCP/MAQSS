@@ -59,7 +59,7 @@ const double ep = sqrt((a2 - b2) / b2);
 class waypoints {
 public:
     waypoints(configContainer *configs);
-    void setWps(coordLocalNED startCoord, int heading, int length, int pattern = RECTANGLE);
+    void setWps(coordLocalNED startCoord, int heading, int length, int pattern = RECTANGLE, float fieldHeading = 0.0);
 
     void setCurrentWp(int Wp) {
         currentWp = Wp;

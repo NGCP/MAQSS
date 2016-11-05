@@ -33,12 +33,28 @@ void waypoints::calcFOV() {
 
 }
 
-void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pattern) {
+void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pattern, float fieldHeading) {
+    // fieldHeading is in degrees
+    
     msnHeight = abs(startCoord[2]); // assume local NED z = 0 is ground
     calcFOV();
     currentWp = 0; // restart from Wp 0 when new Search Chunk is sent
     wps.clear();
-
+    
+    // TODO: Fix these hard coded conversions
+    fieldHeading -= 90;
+    heading -= fieldHeading;
+    
+    // Rotation matrix about Z axis 
+    Matrix3d DCMz, DCMz_t;
+    fieldHeading *= M_PI/180.0; // convert from radians to degrees
+    
+    DCMz << cos(fieldHeading), sin(fieldHeading), 0, -sin(fieldHeading), cos(fieldHeading), 0, 0, 0, 1;
+    DCMz_t = DCMz.transpose();
+    std::cout << DCMz << std::endl;
+    std::cout << DCMz_t << std::endl;
+    
+    
     // RECTANGLE Variables
     float dx(0.0), dy(0.0), sgn(0.0);
     int dx_sign(1);
@@ -54,10 +70,11 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
 
     switch (pattern) {
         case RECTANGLE:
+            startCoord = DCMz * startCoord;
             dx_sign = (sinHeading >= 0) ? 1 : -1;
 
             // Throw this into function so I can create variables inside
-            wps.push_back(startCoord);
+            wps.push_back(DCMz * startCoord);
 
             while (abs(dx) < abs(length * sinHeading)) {
                 sgn = 1 - sgn;
@@ -66,12 +83,13 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
                 tmp[0] = dx + startCoord[0];
                 tmp[1] = dy + startCoord[1];
                 tmp[2] = startCoord[2];
-                wps.push_back(tmp);
+                std::cout << tmp << std::endl;
+                wps.push_back(DCMz * tmp);
 
                 dx += dx_sign * 0.5 * lh;
 
                 tmp[0] = dx + startCoord[0];
-                wps.push_back(tmp);
+                wps.push_back(DCMz * tmp);
 
 
             }
@@ -80,7 +98,7 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
             tmp[0] = length * sinHeading + startCoord[0];
             tmp[1] = length * cosHeading + startCoord[1];
             tmp[2] = startCoord[2];
-            wps.push_back(tmp);
+            wps.push_back(DCMz * tmp);
             break;
 
         case CIRCLE:

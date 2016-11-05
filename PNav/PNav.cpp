@@ -130,8 +130,8 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     } // let GCS specify
 
     // Fly InputFile mission if specified
-    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern);
-    else searchChunk.setWps(startCoord, 330, 50, FIG8);
+    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern, 139);
+    else searchChunk.setWps(startCoord, 100, 50, RECTANGLE, 139);
 
     if (pattern == CAM_ALTITUDE_TEST) set_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
 

@@ -121,7 +121,7 @@ static void grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& 
 #ifdef TEST
     cam.grab();
     cam.retrieve(image);
-
+    cv::cvtColor(image, image, RGB2BGR);
     detectBall(nCaptures, image, output, circles);
 
     cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
@@ -133,7 +133,7 @@ static void grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& 
 
         cam.grab();
         cam.retrieve(image);
-
+        cv::cvtColor(image, image, RGB2BGR);
         detectBall(nCaptures, image, output, circles);
 
         cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);

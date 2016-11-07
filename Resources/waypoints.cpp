@@ -51,9 +51,6 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
     
     DCMz << cos(fieldHeading), sin(fieldHeading), 0, -sin(fieldHeading), cos(fieldHeading), 0, 0, 0, 1;
     DCMz_t = DCMz.transpose();
-    std::cout << DCMz << std::endl;
-    std::cout << DCMz_t << std::endl;
-    
     
     // RECTANGLE Variables
     float dx(0.0), dy(0.0), sgn(0.0);
@@ -83,7 +80,6 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
                 tmp[0] = dx + startCoord[0];
                 tmp[1] = dy + startCoord[1];
                 tmp[2] = startCoord[2];
-                std::cout << tmp << std::endl;
                 wps.push_back(DCMz * tmp);
 
                 dx += dx_sign * 0.5 * lh;

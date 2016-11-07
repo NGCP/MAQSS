@@ -120,7 +120,10 @@ configContainer fileIO::getConfig(int argc, char** argv) {
             else if (!strcmp(tmpChars, "log")) configs.log = (std::stoi(strtok(NULL, " \n")) ? true : false);
 
             else if (!strcmp(tmpChars, "log_freq")) configs.log_freq = std::stof(strtok(NULL, " \n"));
+            
+            else if (!strcmp(tmpChars, "field_heading")) configs.field_heading = std::stof(strtok(NULL, " \n"));
 
+            else if (!strcmp(tmpChars, "setpoint_tolerance")) configs.setpoint_tolerance = std::stof(strtok(NULL, " \n"));
                 // Misc config params
             else {
                 // miscParams are stored in a map where the key is the InputFile param name, and the value is a void pointer which points to the data after the '='

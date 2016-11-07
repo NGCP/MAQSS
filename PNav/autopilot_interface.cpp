@@ -504,26 +504,6 @@ int Autopilot_Interface::send_optical_flow_msg()
     return len;
 
 }
-//    int Autopilot_Interface::send_cpslo_msg(uint8_t status) 
-//{
-//    // Prepare command for off-board mode
-//    // <May not work because the checksum.h, protocol.h, etc files are different>
-//    mavlink_cpslo_msg_t com;
-//    com.MissionStatus = status; // Set mission status to status
-//    
-//    // Encode message
-//    mavlink_message_t message;
-//    mavlink_msg_cpslo_msg_encode(system_id, companion_id, &message, &com);
-//    printf("\n MessageID: %u\n", message.msgid);
-//    // Send the message 
-//    
-//printf("\n MessageID: %u\n", message.msgid);
-//// Send the message 
-//    int len;
-//    len = serial_port->write_message(message);
-//    
-//    return len;
-//}
 
 // ------------------------------------------------------------------------------
 //   Stop Off-Board Mode

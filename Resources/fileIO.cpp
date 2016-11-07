@@ -158,9 +158,12 @@ void fileIO::printConfig(configContainer *configs) {
     std::cerr << "Mission Parameters:" << std::endl;
     std::cerr << "Camera Test Mode: " << configs->cam_Test << std::endl;
     std::cerr << "Camera Test Capture Frequency: " << configs->cap_Freq << std::endl;
+    std::cerr << "Altitude Parameter: " << configs->alt << std::endl;
     std::cerr << "Distance Parameter: " << configs->dist << std::endl;
     std::cerr << "Heading Parameter: " << configs->head << std::endl;
+    std::cerr << "Field Heading Parameter: " << configs->field_heading << std::endl;
     std::cerr << "Number of SetPoints: " << configs->npoints << std::endl;
+    std::cerr << "Setpoint Tolerance: " << configs->setpoint_tolerance << std::endl;
     std::cerr << "Pattern Enum: " << configs->pattern << std::endl;
     std::cerr << std::endl;
 
@@ -169,10 +172,13 @@ void fileIO::printConfig(configContainer *configs) {
     std::cerr << "Camera Horizontal FOV: " << configs->cam_FOV_h << std::endl;
     std::cerr << "Image Width: " << configs->cam_Width << std::endl;
     std::cerr << "Image Height: " << configs->cam_Height << std::endl;
-    std::cerr << "Video Stabilization: " << configs->video_Stabilization << std::endl;
     std::cerr << std::endl;
+    
+    std::cerr << "Logging Parameters" << std::endl;
+    std::cerr << "Logging Enabled: " << configs->log << std::endl;
+    std::cerr << "Logging Frequency: " << configs->log_freq << std::endl;
 
-    std::cerr << "End Configuration" << std::endl;
+    std::cerr << "End Configuration\n" << std::endl;
 
 }
 

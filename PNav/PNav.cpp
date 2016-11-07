@@ -111,7 +111,9 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     serial_port.start();
     autopilot_interface.start();
     ip = autopilot_interface.initial_position;
-    startCoord << ip.x, ip.y, ip.z - configs->alt;
+    
+    // TODO: Figure out how to correctly specify height
+    startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
 
     // instantiate a waypoints class
     waypoints searchChunk(configs);
@@ -131,8 +133,12 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     } // let GCS specify
 
     // Fly InputFile mission if specified
-    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern, configs->field_heading);
-    //    else searchChunk.setWps(startCoord, 100, 50, RECTANGLE, 139);
+    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, configs->field_heading, pattern);
+    //    else searchChunk.setWps(startCoord, 100, 50, 139, RECTANGLE);
+    
+    std::cerr << "New Search Chunk Set with Parameters: heading = " << configs->head << ", distance: " << configs->dist << std::endl;
+    searchChunk.plotWp();
+    std::cerr << std::endl;
 
     if (pattern == CAM_ALTITUDE_TEST) configs->setpoint_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
 

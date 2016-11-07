@@ -59,6 +59,7 @@ log_freq=2
 #    
 #    NUM_PATTERNS
 #};
+# NOTE: Only RECTANGLE pattern fully supported
 pattern=0
 ## End Known Inputs
 

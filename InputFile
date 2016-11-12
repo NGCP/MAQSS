@@ -36,10 +36,12 @@ cam_Test=0
 cap_Freq=0.5
 
 ## Hardcode Mission Parameters
+field_heading=139
 dist=50
 head=92 
 npoints=20
 alt=7
+setpoint_tolerance=3.0
 
 ## Logging 
 log=1
@@ -57,6 +59,7 @@ log_freq=2
 #    
 #    NUM_PATTERNS
 #};
+# NOTE: Only RECTANGLE pattern fully supported
 pattern=0
 ## End Known Inputs
 

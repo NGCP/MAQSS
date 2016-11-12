@@ -71,8 +71,9 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     // Declare variables
     bool set_point_reached = false;
+    bool cv_busy = false;
+    bool offboard = false;
     unsigned int ndx(0);
-    int set_tolerance = 3;
     int pattern(0);
     char tmp[BUF_LEN];
     coordLocalNED startCoord;
@@ -81,9 +82,6 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     // Setup Autopilot interface
     Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
     Autopilot_Interface autopilot_interface(&serial_port);
-
-    // instantiate a waypoints class
-    waypoints searchChunk(configs);
 
     // declare variables for mavlink messages
     mavlink_set_position_target_local_ned_t sp;
@@ -103,7 +101,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     configs_quit = configs;
     signal(SIGINT, quit_handler);
 
-    // Setup GCS interface
+    // Allow camera test mode
     if (configs->cam_Test) {
         std::cerr << "Camera test mode, PNav idling" << std::endl;
         while (true);
@@ -113,27 +111,36 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     serial_port.start();
     autopilot_interface.start();
     ip = autopilot_interface.initial_position;
-    startCoord << ip.x, ip.y, ip.z - configs->alt;
+    
+    // TODO: Figure out how to correctly specify height
+    startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
+
+    // instantiate a waypoints class
+    waypoints searchChunk(configs);
 
     // Locate LNED frame origin
     // TODO: Implement method which checks LNED origin remains constant throughout flight
-    msgs =  autopilot_interface.current_messages;
+    msgs = autopilot_interface.current_messages;
     coordLocalNED LNED_0(msgs.local_position_ned.x, msgs.local_position_ned.y, msgs.local_position_ned.z);
-    coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI/180.0, msgs.global_position_int.lon * 1E-7 * M_PI/180.0, msgs.global_position_int.alt * 1E-3);
+    coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI / 180.0, msgs.global_position_int.lon * 1E-7 * M_PI / 180.0, msgs.global_position_int.alt * 1E-3);
     waypoints::findOriginLocalNED(*configs, LNED_0, LLA_0);
 
-            //TODO: Write function/method to receive mission data (GPS Start, heading, distance)
+    //TODO: Write function/method to receive mission data (GPS Start, heading, distance)
 
-            // Fly InputFile pattern if specified
+    // Fly InputFile pattern if specified
     if (configs->pattern != 999) pattern = configs->pattern;
     else {
     } // let GCS specify
 
     // Fly InputFile mission if specified
-    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, pattern, 139);
-    else searchChunk.setWps(startCoord, 100, 50, RECTANGLE, 139);
+    if (configs->head != 999 && configs->dist != 0) searchChunk.setWps(startCoord, configs->head, configs->dist, configs->field_heading, pattern);
+    //    else searchChunk.setWps(startCoord, 100, 50, 139, RECTANGLE);
+    
+    std::cerr << "New Search Chunk Set with Parameters: heading = " << configs->head << ", distance: " << configs->dist << std::endl;
+    searchChunk.plotWp();
+    std::cerr << std::endl;
 
-    if (pattern == CAM_ALTITUDE_TEST) set_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
+    if (pattern == CAM_ALTITUDE_TEST) configs->setpoint_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
 
     std::cerr << "Current IP: [" << ip.x << ", " << ip.y << "," << ip.z << "]" << std::endl;
     std::cerr << "Begin Streaming setpoints:" << std::endl;
@@ -144,7 +151,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
         autopilot_interface.update_setpoint(sp);
         set_point_reached = false;
 
-        PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
+        //        PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
         std::cerr << ndx + 1 << ", " << searchChunk.wps[ndx][0] << ", " << searchChunk.wps[ndx][1] << ", " << searchChunk.wps[ndx][2] << "; " << std::endl;
         while (!set_point_reached) {
@@ -152,42 +159,54 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
             //            tpos = autopilot_interface.current_messages.position_target_local_ned;
             //            std::cerr << tpos.x << ", " << tpos.y << ", " << tpos.z << std::endl;
             //            sleep(1);
-            //            if (abs(tpos.x - sp.x) < set_tolerance && abs(tpos.y - sp.y) < set_tolerance && abs(tpos.z - sp.z) < set_tolerance) {
+            //            if (abs(tpos.x - sp.x) < configs->setpoint_tolerance  && abs(tpos.y - sp.y) < configs->setpoint_tolerance  && abs(tpos.z - sp.z) < configs->setpoint_tolerance ) {
             //                set_point_reached = true;
             //                break;
             //            }
 
             lpos = autopilot_interface.current_messages.local_position_ned;
-            //            std::cerr << "LPos"
-            //            if (abs(lpos.x - sp.x) < setTolerance && abs(lpos.y - sp.y) < setTolerance && abs(lpos.z - sp.z) < setTolerance) {
-
-            // TODO: See if removing Z tolerance helps
-            if (abs(lpos.x - sp.x) < set_tolerance && abs(lpos.y - sp.y) < set_tolerance) {
+            if (abs(lpos.x - sp.x) < configs->setpoint_tolerance && abs(lpos.y - sp.y) < configs->setpoint_tolerance && abs(lpos.z - sp.z) < configs->setpoint_tolerance) {
                 set_point_reached = true;
                 break;
             }
 
-            // Check timer to log data
+            /* 
+             * autopilot_interface.current_messages.heartbeat.custom_mode will return the following values to correspond to flight modes
+             * NOTE: Needs more testing to verify
+             * offboard = 393216 ->     0x00060000 = 00000000 00000110 00000000 00000000
+             * Manual  =   65536  ->     0x00010000 = 00000000 00000001 00000000 00000000
+             * Position C = 196608 ->   0x00030000 = 00000000 00000011 00000000 00000000
+             * Land = 100925440 ->     0x06040000 = 00000110 00000100 00000000 00000000
+             * 
+             */
+
             t1 = steady_clock::now();
             if (configs->log && (((duration_cast<milliseconds>(t1 - t0).count()) > (1 / configs->log_freq) * 1000))) {
+
                 flt_log.log(&autopilot_interface.current_messages);
                 t0 = steady_clock::now();
-                
-                // capture an image everytime logger is run
-                PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
             }
             ndx = ((ndx == configs->npoints - 1) ? 0 : ndx);
+
+            // if offboard is toggled, request a frame capture from CV
+            offboard = ((0x00060000 & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
+            if (offboard && !cv_busy) {
+                PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
+                cv_busy = true; // flag cv_process as busy so multiple "Starts" dont get sent
+            }
+
+            // if msg is read and msg says "Done", reset cv_busy flag (function calls should resolve Left -> right)
+            if (read(configs->fd_CV_to_PNav, tmp, BUF_LEN) && !strcmp(tmp, "Done")) cv_busy = false;
+            
+            // clear read buffer at every loop;
+            tmp[0] = '\0';
         }
-        std::cerr << "Waiting for msg from Cv" << std::endl;
-        while (!read(configs->fd_CV_to_PNav, tmp, BUF_LEN)) {
-        }
-        std::cerr << "Read msg from Cv: " << tmp << std::endl;
     }
     std::cerr << "];" << std::endl;
     std::cerr << "plot(sp(:,2),sp(:,3),'-x')\nhold all\n axis equal\ngrid on\nplot(sp(1,2),sp(1,3),'or')" << std::endl;
 
     cv_msg = "Exit";
-//    PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
+    PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
 
     // switch through (read from CV, check setpoint, check GCS comms, write GPS to GCS if past 1s)
     //    while (1)

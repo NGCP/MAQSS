@@ -42,6 +42,8 @@ public:
     int head = 999; // compass heading (deg) which can be set from InputFile. Leave as 999 to let GCS specify
     int dist = 0; // distance parameter for mission in meters. Leave as 0 to let GCS specify
     int alt = 7; // altitude to fly mission at [m]
+    float field_heading = 139; // fieldHeading in degrees
+    float setpoint_tolerance = 3.0; // distance in meters to reach to current setpoint before moving onto next setpoint [m]]
     
     // Camera Parameters
     unsigned int cam_Width = 1920; // image capture resolution (pixels)

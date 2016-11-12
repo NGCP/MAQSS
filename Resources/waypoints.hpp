@@ -59,7 +59,7 @@ const double ep = sqrt((a2 - b2) / b2);
 class waypoints {
 public:
     waypoints(configContainer *configs);
-    void setWps(coordLocalNED startCoord, int heading, int length, int pattern = RECTANGLE, float fieldHeading = 0.0);
+    void setWps(coordLocalNED startCoord, int heading, int length, float fieldHeading = 0.0, int pattern = RECTANGLE);
 
     void setCurrentWp(int Wp) {
         currentWp = Wp;
@@ -84,8 +84,8 @@ private:
     int currentWp;
     int patternType;
     unsigned int npoints;
-    float msnHeight; // whatever units local NED is in [m]
-    float lv, lh; // same units as msnHeight
+    float msnHeight; // mission altitude in LocalNED [m]
+    float lv, lh; // Estimated frame capture size [m]]
     float FOV_V, FOV_H; // camera vertical and horizontal field of view angles [rads]
 
 };

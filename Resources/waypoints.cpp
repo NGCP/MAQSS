@@ -33,34 +33,30 @@ void waypoints::calcFOV() {
 
 }
 
-void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pattern, float fieldHeading) {
-    // fieldHeading is in degrees
-    
-    msnHeight = abs(startCoord[2]); // assume local NED z = 0 is ground
-    calcFOV();
-    currentWp = 0; // restart from Wp 0 when new Search Chunk is sent
-    wps.clear();
-    
-    // TODO: Fix these hard coded conversions
-    fieldHeading -= 90;
-    heading -= fieldHeading;
-    
-    // Rotation matrix about Z axis 
-    Matrix3d DCMz, DCMz_t;
-    fieldHeading *= M_PI/180.0; // convert from radians to degrees
-    
-    DCMz << cos(fieldHeading), sin(fieldHeading), 0, -sin(fieldHeading), cos(fieldHeading), 0, 0, 0, 1;
-    DCMz_t = DCMz.transpose();
-    std::cout << DCMz << std::endl;
-    std::cout << DCMz_t << std::endl;
-    
-    
-    // RECTANGLE Variables
-    float dx(0.0), dy(0.0), sgn(0.0);
+void waypoints::setWps(coordLocalNED startCoord, int heading, int length, float fieldHeading, int pattern) {
+    /* Function to set the searchChunk waypoints given a startCoord, heading, length, and fieldHeading. All setpoints will be in vehicle Local NED frame
+     * NOTE: Only pattern type currently supported is RECTANGLE. All other patterns will throw warnings and yield incorrect setpoints
+     * 
+     * Inputs:
+     *      startCoord    : searchChunk starting coordinate in vehicle LocalNED frame. Use LLAtoLocalNED() to convert a GPS coordinate to the vehicle 
+     *                              LocalNED frame. The findOriginLocalNED() method must be called AT LEAST ONCE before LLAtoLocalNED() can be used. All local
+     *                              NED coordinates are in meters. Note that the Z direction is positive down
+     *      heading        :  searchChunk true heading/bearing in degrees. Points the opposite end of the searchChunk from the startCoord in earth's true
+     *                              heading frame. Units are degrees
+     *      length           : searchChunk distance in meters. Specifies the distance in "heading" direction to the opposite end of the searchChunk
+     *      fieldHeading : true heading/bearing of the field being searched in degrees. This parameter serves to rotate the Local NED coordinate frame 
+     *                              prior to the waypoints being generated
+     *      pattern         : specifies the pattern type to be generated according to the pattern enum in waypoints.hpp. 
+     *                              NOTE: Only RECTANGLE Pattern is currently supported
+     * 
+     */
+
     int dx_sign(1);
-    float sinHeading = sind(heading);
-    float cosHeading = cosd(heading);
-    coordLocalNED tmp;
+    float zRot, heading_p;
+    float sinHeading, cosHeading;
+    float dx(0.0), dy(0.0), sgn(0.0);
+    Matrix3d DCMz;
+    Vector3d tmp;
 
     //FIG8 Variables
     unsigned int ndx(0);
@@ -68,48 +64,85 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
     float theta(0);
     float util(0);
 
+    msnHeight = fabs(startCoord[2]); // assume local NED z = 0 is ground
+    calcFOV();
+    currentWp = 0; // restart from Wp 0 when new Search Chunk is sent
+    wps.clear();
+
+    // find clockwise z rotation to align X axis with fieldHeading
+    zRot = fieldHeading - 90.0;
+
+    // find heading in rotated coordinate frame;
+    heading_p = heading - zRot; // heading' [deg]
+
+    // convert values to radians
+    zRot *= M_PI / 180.0;
+    heading_p *= M_PI / 180.0;
+
+    // Rotation matrix about Z axis 
+    DCMz << cos(zRot), sin(zRot), 0, -sin(zRot), cos(zRot), 0, 0, 0, 1;
+
+    // Heading sin/cos in rotated coordinate frame
+    sinHeading = sin(heading_p);
+    cosHeading = cos(heading_p);
+
     switch (pattern) {
         case RECTANGLE:
-            startCoord = DCMz * startCoord;
             dx_sign = (sinHeading >= 0) ? 1 : -1;
+            wps.push_back(startCoord); // add initial coordinate 
 
-            // Throw this into function so I can create variables inside
-            wps.push_back(DCMz * startCoord);
-
-            while (abs(dx) < abs(length * sinHeading)) {
+            // fill setpoints in rotated coordinate frame
+            while (fabs(dx) < fabs(length * sinHeading)) {
                 sgn = 1 - sgn;
                 dy = sgn * length * cosHeading;
 
                 tmp[0] = dx + startCoord[0];
                 tmp[1] = dy + startCoord[1];
                 tmp[2] = startCoord[2];
-                std::cout << tmp << std::endl;
-                wps.push_back(DCMz * tmp);
+                wps.push_back(tmp);
 
                 dx += dx_sign * 0.5 * lh;
 
+                if (fabs(dx) > fabs(length * sinHeading) ) break; // if dx would shoot past final setpoint, break                
                 tmp[0] = dx + startCoord[0];
-                wps.push_back(DCMz * tmp);
-
-
+                wps.push_back( tmp);
             }
 
-            // set final waypoint precisely
+            // set final setpoint precisely
             tmp[0] = length * sinHeading + startCoord[0];
             tmp[1] = length * cosHeading + startCoord[1];
             tmp[2] = startCoord[2];
-            wps.push_back(DCMz * tmp);
+            wps.push_back( tmp);
+            
+            // rotate back to Local NED coordinate frame
+            for (ndx = 0; ndx < wps.size(); ndx++ ) {
+                tmp = wps[ndx]; // wps is a vector of coordLocalNED types (Vector3d))
+                
+                // translate to align startCoord with origin
+                tmp = tmp - startCoord;
+                
+                // rotate to Local NED frame
+                tmp = DCMz * tmp;
+                
+                // translate back to startCoord
+                tmp = tmp + startCoord;
+                
+                wps[ndx] = tmp;
+            }
             break;
 
+            // TODO: Reimplement support for other pattern types
         case CIRCLE:
             // TODO: Create circle type mission
+            std::cerr << "CIRCLE Pattern type not implemented" << std::endl;
             break;
 
         case SQUARE:
-
+            std::cerr << "SQUARE Pattern type not implemented" << std::endl;
             break;
 
         case FIG8:
+            std::cerr << "FIG8 Pattern type currently not supported. Generated set points will be incorrect" << std::endl;
 
             tmp[2] = startCoord[2];
             // seems to work for all quadrants 
@@ -132,6 +165,7 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
             break;
 
         case RACETRACK:
+            std::cerr << "RACETRACK Pattern type currently not supported. Generated set points will be incorrect" << std::endl;
 
             tmp[2] = startCoord[2];
             // seems to work for all quadrants 
@@ -154,6 +188,7 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
             break;
 
         case RACETRACK_WIDE:
+            std::cerr << "RACETRACK_WIDE Pattern type currently not supported. Generated set points will be incorrect" << std::endl;
 
             tmp[2] = startCoord[2];
             // seems to work for all quadrants 
@@ -192,7 +227,7 @@ void waypoints::setWps(coordLocalNED startCoord, int heading, int length, int pa
 
         default:
             std::cerr << "Invalid pattern type" << std::endl;
-            exit(1);
+            return;
             // TODO: Throw GCS a warning and stop mission
 
     }
@@ -268,7 +303,7 @@ coordLLA waypoints::ECEFtoLLA(coordECEF &ECEF) {
     p = sqrt(pow(X, 2) + pow(Y, 2));
     phi = atan2(Z, p * (1 - e2));
 
-    while (abs(phi - phi_1) > tolerance && abs(h - h_1) > tolerance) {
+    while (fabs(phi - phi_1) > tolerance && fabs(h - h_1) > tolerance) {
 
         if (counter > 0) {
             phi = phi_1;
@@ -401,7 +436,6 @@ coordLLA waypoints::coordAt(coordLLA &LLA, float bearing, float distance) {
     // sig_new is much smaller here
     LLA2(0) = atan2(sin(U1) * cos(sig_new) + cos(U1) * sin(sig_new) * cos(bearing), (1 - f) * sqrt(pow(sina, 2.0) +
             pow((sin(U1) * sin(sig_new) - cos(U1) * cos(sig_new) * cos(bearing)), 2.0)));
-    std::cout << pow((sin(U1) * sin(sig_new) - cos(U1) * cos(sig_new) * cos(bearing)), 2) << "," << fabs(sig_old - sig_new) << std::endl;
     lam = atan2(sin(sig_new) * sin(bearing), cos(U1) * cos(sig_new) - sin(U1) * sin(sig_new) * cos(bearing));
     C = f / 16 * cos2a * (4 + f * (4 - 3 * cos2a));
     L = lam - (1 - C) * f * sina * (sig_new + C * sin(sig_new) * (cos(sigM) + C * cos(sig_new) * (-1 + 2 * pow(cos(sigM), 2))));

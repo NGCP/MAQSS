@@ -31,22 +31,22 @@
 using namespace Eigen;
 
 enum Pattern {
-    RECTANGLE,
-    CIRCLE,
-    SQUARE,
-    FIG8,
-    RACETRACK,
-    RACETRACK_WIDE,
-    CAM_ALTITUDE_TEST,
+  RECTANGLE,
+  CIRCLE,
+  SQUARE,
+  FIG8,
+  RACETRACK,
+  RACETRACK_WIDE,
+  CAM_ALTITUDE_TEST,
 
-    NUM_PATTERNS
+  NUM_PATTERNS
 };
 
 enum class CoordFrame {
   BODY_NED,
   LOCAL_NED,
   ECEF,
-  LLA          
+  LLA
 };
 
 enum class PlotOutput {
@@ -77,42 +77,43 @@ const double ep = sqrt((a2 - b2) / b2);
 
 class waypoints {
 public:
-    waypoints(configContainer *configs);
-    void SetWps(coordLocalNED start_coord, int heading, int length, float field_heading = 0.0,
-                            unsigned int pattern = RECTANGLE);
+  waypoints(configContainer *configs);
+  void SetWps(coordLocalNED start_coord, int heading, int length, float field_heading = 0.0,
+          unsigned int pattern = RECTANGLE);
 
-    void SetCurrentWp(int Wp) {
-        current_wp = Wp;
-    }
-    void PlotWp(configContainer& configs, 
-                        CoordFrame output_coord_frame = CoordFrame::LOCAL_NED,
-                        PlotOutput plot_output = PlotOutput::MATLAB_CODE);
+  void SetCurrentWp(int Wp) {
+    current_wp = Wp;
+  }
+  void PlotWp(configContainer& configs,
+          CoordFrame output_coord_frame = CoordFrame::LOCAL_NED,
+          PlotOutput plot_output = PlotOutput::MATLAB_CODE);
 
-    // TODO: Overload to handle vectors?
-    // static methods to convert between LLA and LocalNED. ConfigContiner is required because origin information is stored there
-    static coordLocalNED LLAtoLocalNED(configContainer& configs, coordLLA &LLA, 
-                                                            AngleType input_angle = AngleType::RADIANS);
-    static coordLLA LocalNEDtoLLA(configContainer& configs, coordLocalNED &LNED,
-                                                    AngleType output_angle = AngleType::RADIANS);
-    static coordLocalNED ECEFtoLocalNED(configContainer& configs, coordECEF &ECEF);
-    static coordECEF LocalNEDtoECEF(configContainer& configs, coordLocalNED &LNED);
-    static coordLLA ECEFtoLLA(coordECEF &ECEF, AngleType output_angle = AngleType::RADIANS);
-    static coordECEF LLAtoECEF(coordLLA &LLA,AngleType input_angle = AngleType::RADIANS);
-    
-    static void FindOriginLocalNED(configContainer& configs, coordLocalNED &LNED, coordLLA &LLA);
-    static coordLLA coordAt(coordLLA &LLA, float bearing, float distance);
+  // TODO: Overload to handle vectors?
+  // static methods to convert between LLA and LocalNED. ConfigContiner is required because origin information is stored there
+  static coordLocalNED LLAtoLocalNED(configContainer& configs, coordLLA &LLA,
+          AngleType input_angle = AngleType::RADIANS);
+  static coordLLA LocalNEDtoLLA(configContainer& configs, coordLocalNED &LNED,
+          AngleType output_angle = AngleType::RADIANS);
+  static coordLocalNED ECEFtoLocalNED(configContainer& configs, coordECEF &ECEF);
+  static coordECEF LocalNEDtoECEF(configContainer& configs, coordLocalNED &LNED);
+  static coordLLA ECEFtoLLA(coordECEF &ECEF, AngleType output_angle = AngleType::RADIANS);
+  static coordECEF LLAtoECEF(coordLLA &LLA, AngleType input_angle = AngleType::RADIANS);
 
-    std::vector<coordLocalNED> wps; // Waypoint coordinates stored in LocalNED frame
+  static void FindOriginLocalNED(configContainer& configs, coordLocalNED &LNED, coordLLA &LLA);
+  static coordLLA coordAt(coordLLA &LLA, float bearing, float distance);
 
-    virtual ~waypoints();
+  std::vector<coordLocalNED> wps; // Waypoint coordinates stored in LocalNED frame
+  int current_wp;
+
+  virtual ~waypoints();
 private:
-    void CalcFOV();
-    int current_wp;
-    int patternType;
-    unsigned int npoints;
-    float msnHeight; // mission altitude in LocalNED [m]
-    float lv, lh; // Estimated frame capture size [m]
-    float FOV_V, FOV_H; // camera vertical and horizontal field of view angles [rads]
+  void CalcFOV();
+
+  int patternType;
+  unsigned int npoints;
+  float msnHeight; // mission altitude in LocalNED [m]
+  float lv, lh; // Estimated frame capture size [m]
+  float FOV_V, FOV_H; // camera vertical and horizontal field of view angles [rads]
 
 };
 

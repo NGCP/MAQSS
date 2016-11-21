@@ -23,7 +23,7 @@ baudrate=57600
 # Camera Field of View Estimate
 cam_FOV_v=80
 cam_FOV_h=90
-video_Stabilization=1
+#video_Stabilization=1
 
 # Cam Test Frame Size
 cam_Width=1280

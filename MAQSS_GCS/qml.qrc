@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>MainPage.qml</file>
+        <file>MessageBox.qml</file>
+        <file>VehicleStatus.qml</file>
+        <file>Transforms.js</file>
+        <file>ControlPanel.qml</file>
+        <file>MatrixMath.js</file>
+        <file>Coordinates.js</file>
+        <file>GPS.js</file>
+        <file>MapContainer.qml</file>
+        <file>SearchChunk.qml</file>
+        <file>Quadcopter.qml</file>
+        <file>QuadcopterIcon.qml</file>
+        <file>Utils.js</file>
+    </qresource>
+</RCC>

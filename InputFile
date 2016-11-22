@@ -18,6 +18,7 @@ uart_name=/dev/ttyAMA0
 
 ### Known Inputs (not required)
 baudrate=57600
+heartbeat_freq=0.33
 
 ## RBP Camera Parameters
 # Camera Field of View Estimate

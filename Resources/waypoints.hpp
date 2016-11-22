@@ -103,7 +103,7 @@ public:
   static coordLLA coordAt(coordLLA &LLA, float bearing, float distance);
 
   std::vector<coordLocalNED> wps; // Waypoint coordinates stored in LocalNED frame
-  int current_wp;
+  unsigned int current_wp;
 
   virtual ~waypoints();
 private:

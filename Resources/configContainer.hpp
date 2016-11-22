@@ -35,6 +35,7 @@ public:
     int baudrate = 57600; // microcomputer to flightcontroller baudrate (57600 default)
     int fd_CV_to_PNav;
     int fd_PNav_to_CV;
+    float heartbeat_freq = 0.5; // rate to send heartbeats to GCS[1/s]
     
     // Hardcoded Mission Parameters
     unsigned int npoints = 25; // number of waypoints to generate for flight pattern

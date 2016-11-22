@@ -9,6 +9,7 @@
 #include <ctime>
 #include <chrono>
 #include <functional>
+#include <thread>
 
 // C headers
 #include <fcntl.h>
@@ -29,6 +30,7 @@
 #include "flight_logger.hpp"
 #include <SerialXbee.hpp>
 #include <ReceivePacket.hpp>
+#include <TransmitRequest.hpp>
 
 // TODO: Have karthik fix my makefile
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
@@ -37,6 +39,7 @@
 //   Quit Signal Handler
 // ------------------------------------------------------------------------------
 // this function is called when you press Ctrl-C
+#define GCS_MAC 0x0013A20040F8064C
 
 Autopilot_Interface *autopilot_interface_quit;
 Serial_Port *serial_port_quit;
@@ -63,6 +66,10 @@ void quit_handler(int sig) {
   // pipes
   PNav_quit->cleanup(configs_quit);
 
+  // CV process
+//  std::string cv_msg = "Exit";
+//  PNav_quit->writePipe(configs_quit->fd_PNav_to_CV, cv_msg);
+
   // end program here
   exit(0);
 }
@@ -70,7 +77,7 @@ void quit_handler(int sig) {
 // callback function for xbee_interface
 // Example GCS mission: "NEWMSG,MSN,Q2,P35.308 -120.668 -0.5985199129208922, H-11.191,F139.0,D123"
 
-struct search_chunk {
+struct mission_status {
   std::string msg;
   double lat = 0; // [deg]
   double lon = 0; // [deg]
@@ -79,9 +86,20 @@ struct search_chunk {
   float field_heading = 0; // [deg]
   float distance = 0; // [m]
   bool changed_flag = false;
-  bool start = false;
+  bool start = false; // commanded start/stop status
 
-} search_chunk;
+} mission_status;
+
+struct vehicle_status {
+  bool start = false; // vehicle mission start/stop status
+  unsigned int role = 0;
+  double lat;
+  double lon;
+  double alt;
+  coordLocalNED LNED;
+  std::string status = "Online";
+  std::string gcs_update;
+} vehicle_status;
 
 std::vector<std::string> split(const std::string &s, char delim) {
   std::stringstream ss(s);
@@ -104,10 +122,13 @@ void CallbackFunction(XBEE::Frame *item) {
   std::vector<std::string> position_strings(3);
   int delim = ',';
 
+  int debug = 0;
+  std::cerr << "Entered Callback " << std::endl;
   // check if pointer is NULL
   if (r_packet != NULL) {
     str_data = r_packet->GetData();
   }
+  std::cerr << debug++ << std::endl;
 
   // check char[6] == ',' (comma) (prevent crashes))
   if (str_data[6] != ',') valid_msg = false;
@@ -120,40 +141,40 @@ void CallbackFunction(XBEE::Frame *item) {
 
     // if-else if branch to determine message type and handling
     if (!strcmp(msg_components[1].c_str(), "MSN") && valid_msg) {
-      // NEWMSG,MSN,Q2,P35.3085519592 -120.668932266 0.00000,H103.29054493,F139.7,D228.812279
+      // NEWMSG,MSN,Q2,P35.3085519592 -120.668932266 0,H103.29054493,F139.7,D228.8
       delim = ' ';
       std::cerr << "Handling Mission Message: " << str_data << std::endl;
 
       // store search_chunk start position
       msg_components[3].erase(0, 1);
       position_strings = split(msg_components[3], delim);
-      search_chunk.lat = std::stod(position_strings[0]);
-      search_chunk.lon = std::stod(position_strings[1]);
-      search_chunk.alt = std::stof(position_strings[2]);
+      mission_status.lat = std::stod(position_strings[0]);
+      mission_status.lon = std::stod(position_strings[1]);
+      mission_status.alt = std::stof(position_strings[2]);
 
       // store search_chunk mission heading
       msg_components[4].erase(0, 1);
-      search_chunk.heading = std::stof(msg_components[4]);
+      mission_status.heading = std::stof(msg_components[4]);
 
       // store search_chunk field heading
       msg_components[5].erase(0, 1);
-      search_chunk.field_heading = std::stof(msg_components[5]);
+      mission_status.field_heading = std::stof(msg_components[5]);
 
       // store search_chunk distance
       msg_components[6].erase(0, 1);
-      search_chunk.distance = std::stof(msg_components[6]);
+      mission_status.distance = std::stof(msg_components[6]);
 
       // set flag to indicate new mission parameters received
-      search_chunk.changed_flag = true;
+      mission_status.changed_flag = true;
 
     } else if (!strcmp(msg_components[1].c_str(), "START") && valid_msg) {
       // NEWMSG,START
       std::cerr << "Handle Start Message: " << str_data << std::endl;
-      search_chunk.start = true;
+      mission_status.start = true;
     } else if (!strcmp(msg_components[1].c_str(), "STOP") && valid_msg) {
       // NEWMSG,STOP
       std::cerr << "Handle Stop Message: " << str_data << std::endl;
-      search_chunk.start = false;
+      mission_status.start = false;
     } else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg) {
       // NEWMSG,POI
       std::cerr << "Handle Point of Interest Message: " << str_data << std::endl;
@@ -167,16 +188,28 @@ void CallbackFunction(XBEE::Frame *item) {
   }
 }
 
+void UpdateGCS(XBEE::SerialXbee &xbee_interface) {
+  /* Function to write an update message to the GCS at GCS_MAC address
+   * 
+   * The messge will have the form:
+   * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
+   */
+  XBEE::TransmitRequest frame_gcs(GCS_MAC);
+  std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl;
+  frame_gcs.SetData(vehicle_status.gcs_update);
+  xbee_interface.AsyncWriteFrame(&frame_gcs);
+}
+
 int mainLoop(processInterface *PNav, configContainer *configs) {
 
   // TODO: Make a comms(RBP test mode which doesnt try to start the autopilot_interface)  test loop
   using namespace std::chrono;
 
   // Declare variables
-  bool set_point_reached = false;
   bool cv_busy = false;
   bool offboard = false;
-  unsigned int ndx(0), wp_ndx(0);
+  bool update_setpoint = false;
+  unsigned int ndx(0);
   int pattern(0);
   char tmp[BUF_LEN];
   coordLLA start_coordLLA;
@@ -187,7 +220,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
   Autopilot_Interface autopilot_interface(&serial_port);
 
-  // Setup Xbee serial interface 
+  // Setup Xbee serial interface and start reading
   XBEE::SerialXbee xbee_interface;
   xbee_interface.ReadHandler = std::bind(&CallbackFunction, std::placeholders::_1);
   xbee_interface.AsyncReadFrame();
@@ -196,6 +229,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   mavlink_set_position_target_local_ned_t sp;
   mavlink_set_position_target_local_ned_t ip;
   mavlink_local_position_ned_t lpos;
+  mavlink_global_position_int_t gpos;
   Mavlink_Messages msgs;
   //    mavlink_position_target_local_ned_t tpos;
 
@@ -225,94 +259,151 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
 
   // instantiate a waypoints class
-  waypoints searchChunk(configs);
+  waypoints search_chunk_waypoints(configs);
 
   // Locate LNED frame origin
   // TODO: Implement method which checks LNED origin remains constant throughout flight
   msgs = autopilot_interface.current_messages;
-  coordLocalNED LNED_0(msgs.local_position_ned.x, msgs.local_position_ned.y, msgs.local_position_ned.z);
-  coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI / 180.0, msgs.global_position_int.lon * 1E-7 * M_PI / 180.0, msgs.global_position_int.alt * 1E-3);
-  
+  coordLocalNED LNED_0(msgs.local_position_ned.x,
+          msgs.local_position_ned.y,
+          msgs.local_position_ned.z);
+  coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI / 180.0,
+          msgs.global_position_int.lon * 1E-7 * M_PI / 180.0,
+          msgs.global_position_int.alt * 1E-3);
+
   // TODO: Print origin too
   waypoints::FindOriginLocalNED(*configs, LNED_0, LLA_0);
 
-  //TODO: Write function/method to receive mission data (GPS Start, heading, distance)
-
   // Fly InputFile pattern if specified
   if (configs->pattern != 999) pattern = configs->pattern;
-  else {
-  } // let GCS specify
+  else configs->pattern = RECTANGLE; // let GCS specify
 
   // Fly InputFile mission if specified
-  if (configs->head != 999 && configs->dist != 0) searchChunk.SetWps(startCoord, configs->head, configs->dist, configs->field_heading, pattern);
-  //    else searchChunk.setWps(startCoord, 100, 50, 139, RECTANGLE);
+  if (configs->head != 999 && configs->dist != 0) search_chunk_waypoints.SetWps(startCoord,
+          configs->head, configs->dist, configs->field_heading, pattern);
 
-  if (pattern == CAM_ALTITUDE_TEST) configs->setpoint_tolerance = 0.5; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
+  if (pattern == CAM_ALTITUDE_TEST) configs->setpoint_tolerance = 1.0; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
 
-  // store timer for logging and writing heartbeat msgs
-   t0_log = steady_clock::now();
-   t0_heartbeat = steady_clock::now();
-   ndx = 0;
-   
+  // store initial time for logging and writing heartbeat msgs
+  t0_log = steady_clock::now();
+  t0_heartbeat = steady_clock::now();
+  ndx = 0;
+
   // mainloop
   while (1) {
+    if (vehicle_status.role != 0) {
+      std::cerr << "Vehicle Role is not Quick Scan" << std::endl;
+      break;
+    }
     // GCS reads are handled by the CallbackFunction
     // check if vehicle is in offboard mode
     offboard = ((0x00060000 & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
-    
+
     // set current wp
-    ndx = searchChunk.current_wp;
-    set_position(searchChunk.wps[ndx][0], searchChunk.wps[ndx][1], searchChunk.wps[ndx][2], sp);
-    
+    ndx = search_chunk_waypoints.current_wp;
+    if (update_setpoint && ndx < search_chunk_waypoints.wps.size()) {
+      set_position(search_chunk_waypoints.wps[ndx][0], search_chunk_waypoints.wps[ndx][1], search_chunk_waypoints.wps[ndx][2], sp);
+      autopilot_interface.update_setpoint(sp);
+      std::cerr << "Updating Setpoint " << ndx << " of " << search_chunk_waypoints.wps.size() << std::endl;
+    }
+
     // check current location
     lpos = autopilot_interface.current_messages.local_position_ned;
+    gpos = autopilot_interface.current_messages.global_position_int;
 
-    usleep(500000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
     // if start command, set flag, (tell CV to start?)
+    if (mission_status.start && mission_status.start != vehicle_status.start) {
+      // TODO: Implement functionality for start/stop
+      std::cerr << "Start commanded" << std::endl;
+      vehicle_status.start = true;
+      vehicle_status.status = "Started";
+    }
 
     // if stop command, set flag (tell CV to stop?)
+    if (!mission_status.start && mission_status.start != vehicle_status.start) {
+      std::cerr << "Stop commanded" << std::endl;
+      vehicle_status.start = false;
+      vehicle_status.status = "Online";
+    }
 
     // if new search_chunk mission msg received, update Waypoint class
-    if (search_chunk.changed_flag) {
+    if (mission_status.changed_flag) {
       std::cerr << "New Mission Received" << std::endl;
-      std::cerr << "Starting [lat, lon, alt]: [" << search_chunk.lat << ", " << search_chunk.lon << ", " << search_chunk.alt << "]" << std::endl;
-      std::cerr << "Mission [head, dist]: [" << search_chunk.heading << ", " << search_chunk.distance << "]" << std::endl;
-      search_chunk.changed_flag = false;
+      std::cerr << "Starting [lat, lon, alt]: [" << mission_status.lat << ", " << mission_status.lon << ", " << mission_status.alt << "]" << std::endl;
+      std::cerr << "Mission [head, dist]: [" << mission_status.heading << ", " << mission_status.distance << "]" << std::endl;
+      mission_status.changed_flag = false;
 
       // calculate wp
-      // TODO: Altitude should be set from input file
-      start_coordLLA << (float) search_chunk.lat, (float) search_chunk.lon, configs->alt;
+      start_coordLLA << (float) mission_status.lat, (float) mission_status.lon, configs->alt;
       start_coordLLA[0] = start_coordLLA[0] * M_PI / 180.0; // convert from deg2rad
       start_coordLLA[1] = start_coordLLA[1] * M_PI / 180.0;
       startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
-      searchChunk.SetWps(startCoord, search_chunk.heading, search_chunk.distance, search_chunk.field_heading, pattern);
+      search_chunk_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
 
-      std::cerr << "New Search Chunk Set with Parameters: heading = " << search_chunk.heading <<
-              ", field_heading: " << search_chunk.field_heading <<
-              ", distance: " << search_chunk.distance << std::endl;
-      searchChunk.PlotWp(*configs);
-      searchChunk.PlotWp(*configs, CoordFrame::LLA);
+      std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading <<
+              ", field_heading: " << mission_status.field_heading <<
+              ", distance: " << mission_status.distance << std::endl;
+      //      search_chunk_waypoints.PlotWp(*configs);
+      search_chunk_waypoints.PlotWp(*configs, CoordFrame::LLA);
       std::cerr << std::endl;
     }
 
-    // if start command set 
-    // if time change > .1s, send a GPS location message
+    // if time change > heartbeat_freq, send a GPS location message
+    t1_heartbeat = steady_clock::now();
+    if ((((duration_cast<milliseconds>(t1_heartbeat - t0_heartbeat).count()) >
+            (1 / configs->heartbeat_freq) * 1000))) {
+      vehicle_status.LNED << lpos.x, lpos.y, lpos.z;
+      vehicle_status.lat = gpos.lat * 1E-7;
+      vehicle_status.lon = gpos.lon * 1E-7;
+      vehicle_status.alt = gpos.alt * 1E-3;
+      vehicle_status.gcs_update = "Q0,P" + std::to_string(vehicle_status.lat) + " " +
+              std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
+              ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
+      UpdateGCS(xbee_interface);
+      t0_heartbeat = steady_clock::now();
+    }
+
+    // if time change > log->freq, log a message
+    t1_log = steady_clock::now();
+    if ((((duration_cast<milliseconds>(t1_log - t0_log).count()) >
+            (1 / configs->log_freq) * 1000))) {
+
+      flt_log.log(&autopilot_interface.current_messages);
+      t0_log = steady_clock::now();
+    }
 
     // if read(CV) has message
     // if point of interest found, send GPS location to GCS
+    if (offboard && !cv_busy) {
+      PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
+      cv_busy = true; // flag cv_process as busy so multiple "Starts" dont get sent
+    }
+
+    // if msg is read and msg says "Done", reset cv_busy flag (function calls should resolve Left -> right)
+    if (read(configs->fd_CV_to_PNav, tmp, BUF_LEN) && !strcmp(tmp, "Done")) cv_busy = false;
+
+    // clear CV read buffer at every loop;
+    tmp[0] = '\0';
 
     // if current location is within tolerance of target setpoint
     // increment current waypoint index
-    if (abs(lpos.x - sp.x) < configs->setpoint_tolerance && abs(lpos.y - sp.y) < configs->setpoint_tolerance && abs(lpos.z - sp.z) < configs->setpoint_tolerance) {
-          set_point_reached = true;
-          break;
-        }
-    
+    if (search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size() &&
+            fabs(lpos.x - sp.x) < configs->setpoint_tolerance &&
+            fabs(lpos.y - sp.y) < configs->setpoint_tolerance &&
+            fabs(lpos.z - sp.z) < configs->setpoint_tolerance) {
+      update_setpoint = true;
+      search_chunk_waypoints.current_wp++;
+    }
+
     // if current waypoint index is past end of waypoints vector, tell GCS and loiter
     // update stream to Pixhawk
   }
   std::cerr << "Exiting Comms test loop" << std::endl;
 
+  cv_msg = "Exit";
+  PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
   autopilot_interface.stop();
   serial_port.stop();
   return 0;
@@ -334,3 +425,5 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+

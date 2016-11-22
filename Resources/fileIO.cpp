@@ -92,6 +92,8 @@ configContainer fileIO::getConfig(int argc, char** argv) {
                 configs.uart_name = strtok(NULL, " \n");
             }                // Known config params but not required
             else if (!strcmp(tmpChars, "baudrate")) configs.baudrate = std::stoi(strtok(NULL, " \n"));
+            
+            else if (!strcmp(tmpChars, "heartbeat_freq")) configs.heartbeat_freq = std::stof(strtok(NULL, " \n"));
 
             else if (!strcmp(tmpChars, "cam_FOV_v")) configs.cam_FOV_v = std::stoi(strtok(NULL, " \n"));
 

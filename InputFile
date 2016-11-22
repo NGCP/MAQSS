@@ -37,9 +37,9 @@ cam_Test=0
 cap_Freq=0.5
 
 ## Hardcode Mission Parameters
-field_heading=139
-dist=50
-head=92 
+field_heading=999
+dist=0
+head=999
 npoints=20
 alt=7
 setpoint_tolerance=3.0

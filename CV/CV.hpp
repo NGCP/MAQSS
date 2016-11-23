@@ -13,6 +13,7 @@
 #define START_STR "Start"
 #define EXIT_STR "Exit"
 #define DONE_STR "Done"
+#define FOUND_STR "Found"
 
 // CV definitions
 #define RED 2

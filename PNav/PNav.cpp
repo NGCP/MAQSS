@@ -142,8 +142,8 @@ void CallbackFunction(XBEE::Frame *item) {
 
     // if-else if branch to determine message type and handling
     if (!strcmp(msg_components[1].c_str(), "MSN") && valid_msg) {
-      // NEWMSG,MSN,Q2,P35.3085519592 -120.668932266 0,H103.29054493,F139.7,D228.8
-      delim = ' ';
+      // NEWMSG,MSN,Q2,P35.3085519592:-120.668932266:0,H103.29054493,F139.7,D228.8
+      delim = ':';
       std::cerr << "Handling Mission Message: " << str_data << std::endl;
 
       // store search_chunk start position
@@ -224,6 +224,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   // Setup Xbee serial interface and start reading
   XBEE::SerialXbee xbee_interface;
   xbee_interface.ReadHandler = std::bind(&CallbackFunction, std::placeholders::_1);
+//  xbee_interface.Connect();
   xbee_interface.AsyncReadFrame();
 
   // declare variables for mavlink messages
@@ -359,8 +360,8 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       vehicle_status.lat = gpos.lat * 1E-7;
       vehicle_status.lon = gpos.lon * 1E-7;
       vehicle_status.alt = gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,UPDT,Q0,P" + std::to_string(vehicle_status.lat) + " " +
-              std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
+      vehicle_status.gcs_update = "NEWMSG,UPDT,Q0,P" + std::to_string(vehicle_status.lat) + ":" +
+              std::to_string(vehicle_status.lon) + ":" + std::to_string(vehicle_status.alt) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       UpdateGCS(xbee_interface);
       t0_heartbeat = steady_clock::now();
@@ -386,11 +387,11 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     if (read(configs->fd_CV_to_PNav, tmp, BUF_LEN) && !strcmp(tmp, "Done")) cv_busy = false;
     else if (!strcmp(tmp, "Found")) {
       mission_status.target_LLA << gpos.lat * 1E-7, gpos.lon * 1E-7, gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,TGT,Q0,P" + std::to_string(mission_status.target_LLA[0]) + " " +
-              std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
+      vehicle_status.gcs_update = "NEWMSG,TGT,Q0,P" + std::to_string(mission_status.target_LLA[0]) + ":" +
+              std::to_string(mission_status.target_LLA[1]) + ":" + std::to_string(mission_status.target_LLA[2]) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
-              std::to_string(mission_status.target_LLA[0]) + " " +
-              std::to_string(mission_status.target_LLA[1]) + " " + 
+              std::to_string(mission_status.target_LLA[0]) + ":" +
+              std::to_string(mission_status.target_LLA[1]) + ":" + 
               std::to_string(mission_status.target_LLA[2]);
       UpdateGCS(xbee_interface);
     }

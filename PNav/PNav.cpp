@@ -224,7 +224,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   // Setup Xbee serial interface and start reading
   XBEE::SerialXbee xbee_interface;
   xbee_interface.ReadHandler = std::bind(&CallbackFunction, std::placeholders::_1);
-//  xbee_interface.Connect();
+  //  xbee_interface.Connect();
   xbee_interface.AsyncReadFrame();
 
   // declare variables for mavlink messages
@@ -232,8 +232,9 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   mavlink_set_position_target_local_ned_t ip;
   mavlink_local_position_ned_t lpos;
   mavlink_global_position_int_t gpos;
+  mavlink_position_target_local_ned_t tpos;
   Mavlink_Messages msgs;
-  //    mavlink_position_target_local_ned_t tpos;
+
 
   // start timer for logging
   steady_clock::time_point t0_log, t0_heartbeat, t1_log, t1_heartbeat;
@@ -303,23 +304,27 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     // set current wp
     ndx = search_chunk_waypoints.current_wp;
-    if (update_setpoint && ndx < search_chunk_waypoints.wps.size()) {
+    if (update_setpoint && (ndx < search_chunk_waypoints.wps.size())) {
       set_position(search_chunk_waypoints.wps[ndx][0], search_chunk_waypoints.wps[ndx][1], search_chunk_waypoints.wps[ndx][2], sp);
       autopilot_interface.update_setpoint(sp);
       std::cerr << "Updating Setpoint " << ndx << " of " << search_chunk_waypoints.wps.size() << std::endl;
+      update_setpoint = false;
     }
 
     // check current location
     lpos = autopilot_interface.current_messages.local_position_ned;
     gpos = autopilot_interface.current_messages.global_position_int;
+    tpos = autopilot_interface.current_messages.position_target_local_ned;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    // TODO: Delete this
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // if start command, set flag, (tell CV to start?)
     if (mission_status.start && mission_status.start != vehicle_status.start) {
       // TODO: Implement functionality for start/stop
       std::cerr << "Start commanded" << std::endl;
       vehicle_status.start = true;
+      update_setpoint = true;
       vehicle_status.status = "Started";
     }
 
@@ -327,6 +332,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     if (!mission_status.start && mission_status.start != vehicle_status.start) {
       std::cerr << "Stop commanded" << std::endl;
       vehicle_status.start = false;
+      update_setpoint = false;
       vehicle_status.status = "Online";
     }
 
@@ -342,6 +348,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       start_coordLLA[0] = start_coordLLA[0] * M_PI / 180.0; // convert from deg2rad
       start_coordLLA[1] = start_coordLLA[1] * M_PI / 180.0;
       startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
+      startCoord[2] = ip.z - configs->alt;
       search_chunk_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
 
       std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading <<
@@ -349,6 +356,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
               ", distance: " << mission_status.distance << std::endl;
       //      search_chunk_waypoints.PlotWp(*configs);
       search_chunk_waypoints.PlotWp(*configs, CoordFrame::LLA);
+      search_chunk_waypoints.PlotWp(*configs, CoordFrame::LOCAL_NED);
       std::cerr << std::endl;
     }
 
@@ -391,7 +399,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
               std::to_string(mission_status.target_LLA[1]) + ":" + std::to_string(mission_status.target_LLA[2]) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
               std::to_string(mission_status.target_LLA[0]) + ":" +
-              std::to_string(mission_status.target_LLA[1]) + ":" + 
+              std::to_string(mission_status.target_LLA[1]) + ":" +
               std::to_string(mission_status.target_LLA[2]);
       UpdateGCS(xbee_interface);
     }
@@ -401,10 +409,16 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     // if current location is within tolerance of target setpoint
     // increment current waypoint index
-    if (search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size() &&
-            fabs(lpos.x - sp.x) < configs->setpoint_tolerance &&
-            fabs(lpos.y - sp.y) < configs->setpoint_tolerance &&
-            fabs(lpos.z - sp.z) < configs->setpoint_tolerance) {
+        if ((search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size()) &&
+               (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
+                (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
+                (fabs(lpos.z - sp.z) < configs->setpoint_tolerance))
+
+//    if ((search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size()) &&
+//            (fabs(tpos.x - sp.x) < configs->setpoint_tolerance) &&
+//            (fabs(tpos.y - sp.y) < configs->setpoint_tolerance) &&
+//            (fabs(tpos.z - sp.z) < configs->setpoint_tolerance)) 
+    {
       update_setpoint = true;
       search_chunk_waypoints.current_wp++;
     }

@@ -369,7 +369,8 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       vehicle_status.lat = gpos.lat * 1E-7;
       vehicle_status.lon = gpos.lon * 1E-7;
       vehicle_status.alt = gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,UPDT,Q0,P" + std::to_string(vehicle_status.lat) + ":" +
+      vehicle_status.gcs_update = "NEWMSG,UPDT,Q" + std::to_string(configs->quad_id) +",P" + 
+              std::to_string(vehicle_status.lat) + ":" +
               std::to_string(vehicle_status.lon) + ":" + std::to_string(vehicle_status.alt) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       UpdateGCS(xbee_interface);
@@ -396,7 +397,8 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     if (read(configs->fd_CV_to_PNav, tmp, BUF_LEN) && !strcmp(tmp, "Done")) cv_busy = false;
     else if (!strcmp(tmp, "Found")) {
       mission_status.target_LLA << gpos.lat * 1E-7, gpos.lon * 1E-7, gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,TGT,Q0,P" + std::to_string(mission_status.target_LLA[0]) + ":" +
+      vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) +",P" + 
+              std::to_string(mission_status.target_LLA[0]) + ":" +
               std::to_string(mission_status.target_LLA[1]) + ":" + std::to_string(mission_status.target_LLA[2]) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
               std::to_string(mission_status.target_LLA[0]) + ":" +

@@ -3,6 +3,7 @@
 
 ### Required Inputs
 Version=1.0
+Quad=B
 
 ## Pipe Names
 # Pipe for CV to write to PNav (PNav reads from CV)
@@ -49,8 +50,8 @@ setpoint_tolerance=3.0
 log=1
 log_freq=2
 
-# Main Loop Delay
-
+# Main Loop Delay [ms] (0 for none)
+debug_delay=0
 
 # Specify pattern according to pattern enum in waypoints.hpp
 #enum pattern {
@@ -70,4 +71,3 @@ pattern=0
 
 # These will be stored into misc_Params
 my_Name=Frank
-Quad=B

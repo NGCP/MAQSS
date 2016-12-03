@@ -316,8 +316,9 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     gpos = autopilot_interface.current_messages.global_position_int;
     tpos = autopilot_interface.current_messages.position_target_local_ned;
 
-    // TODO: Delete this
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Check if a delay is commanded for debugging
+    if (!configs->debug_delay)  
+      std::this_thread::sleep_for(std::chrono::milliseconds(configs->debug_delay));
 
     // if start command, set flag, (tell CV to start?)
     if (mission_status.start && mission_status.start != vehicle_status.start) {

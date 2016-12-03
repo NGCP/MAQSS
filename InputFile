@@ -44,9 +44,13 @@ npoints=20
 alt=7
 setpoint_tolerance=3.0
 
-## Logging 
+# Debugging
+# Logging
 log=1
 log_freq=2
+
+# Main Loop Delay
+
 
 # Specify pattern according to pattern enum in waypoints.hpp
 #enum pattern {

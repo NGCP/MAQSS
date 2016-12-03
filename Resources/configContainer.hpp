@@ -32,6 +32,7 @@ public:
     std::string uart_name;
     bool log = false; // log flight data
     float log_freq = 2; // log frequency in Hz
+    int debug_delay = 0; // delay at each loop of main loop for debugging purposes
     int baudrate = 57600; // microcomputer to flightcontroller baudrate (57600 default)
     int fd_CV_to_PNav;
     int fd_PNav_to_CV;

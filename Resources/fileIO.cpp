@@ -123,6 +123,8 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 
             else if (!strcmp(tmpChars, "log_freq")) configs.log_freq = std::stof(strtok(NULL, " \n"));
             
+            else if (!strcmp(tmpChars, "debug_delay")) configs.debug_delay = std::stoi(strtok(NULL, " \n"));
+            
             else if (!strcmp(tmpChars, "field_heading")) configs.field_heading = std::stof(strtok(NULL, " \n"));
 
             else if (!strcmp(tmpChars, "setpoint_tolerance")) configs.setpoint_tolerance = std::stof(strtok(NULL, " \n"));

@@ -18,4 +18,8 @@
 // CV definitions
 #define RED 2
 
+//Localization Definitions
+#define SENSOR_WIDTH 3.76
+#define FOCAL_LENGTH 3.6
+
 #endif

@@ -64,6 +64,18 @@ static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
   sleep(2);
 }
 
+static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
+  int xPixels, yPixels;
+  Size imgSize = image.size();
+  double GSD = (SENSOR_WIDTH * height) / (FOCAL_LENGTH * imgSize.width); //Calculate Ground Sampling Distance
+  
+  xPixels = center.x - s.width/2; //How far from center?
+  yPixels = center.y - s.width/2;
+  
+  cout << GSD * xPixels <<endl; //x distance in meters
+  cout << GSD * yPixels <<endl; //y distance in meters
+}
+
 static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
   cv::Mat channels[3];
   bool drawCircles;

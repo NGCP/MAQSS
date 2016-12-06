@@ -1,5 +1,6 @@
 # InputFile to specify all configurations
 # NOTE: DO NOT LEAVE lines with blank whitespaces (will be stored into miscParams)
+# Quad Name must be supplied correctly or vehicle will misidentify itself to GCS
 
 ### Required Inputs
 Version=1.0

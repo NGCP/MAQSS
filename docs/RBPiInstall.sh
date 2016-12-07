@@ -22,6 +22,7 @@ cd ~/Downloads
 pwd
 wget -O eigen3.2.10.tar.bz2 http://bitbucket.org/eigen/eigen/get/3.2.10.tar.bz2
 tar -xvjf eigen3.2.10.tar.bz2
+cd eigen-eigen-b9cd8366d4e8
 sudo mv Eigen /usr/local/include
 
 echo "Raspberry Pi Programs Installed"

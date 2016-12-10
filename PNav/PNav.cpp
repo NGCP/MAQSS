@@ -318,7 +318,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
   // main loop
   while (1) {
-    
+
     // if role has been changed, clear all current wps or POI
     if (vehicle_status.role_changed) {
       mission_waypoints.ClearMission();

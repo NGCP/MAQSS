@@ -339,7 +339,8 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       autopilot_interface.update_setpoint(sp);
       std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
       update_setpoint = false;
-    } else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role) {
+    }
+    else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role) {
       set_position(mission_waypoints.POI[ndx][0],
               mission_waypoints.POI[ndx][1],
               mission_waypoints.POI[ndx][2], sp);
@@ -399,6 +400,13 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       } else if (vehicle_status.role) { // append a POI waypoint
         start_coordLLA << (float) mission_status.lat, (float) mission_status.lon, configs->alt;
         startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA, AngleType::DEGREES);
+        startCoord[2] = ip.z - configs->alt;
+        mission_waypoints.SetPOI(startCoord);
+      }
+      }
+      else if (vehicle_status.role) { // append a POI waypoint
+        start_coordLLA << (float)mission_status.lat, (float) mission_status.lon, configs->alt;
+        startCoord = waypoints::LLAtoLocalNED(configs, start_coordLLA, AngleType::DEGREES);
         startCoord[2] = ip.z - configs->alt;
         mission_waypoints.SetPOI(startCoord);
       }

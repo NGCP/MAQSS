@@ -336,14 +336,6 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       set_position(mission_waypoints.wps[ndx][0],
               mission_waypoints.wps[ndx][1],
               mission_waypoints.wps[ndx][2], sp);
-      autopilot_interface.update_setpoint(sp);
-      std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
-      update_setpoint = false;
-    } else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role) {
-      set_position(mission_waypoints.POI[ndx][0],
-              mission_waypoints.POI[ndx][1],
-              mission_waypoints.POI[ndx][2], sp);
-      autopilot_interface.update_setpoint(sp);
       std::cerr << "Moving to POI " << ndx << std::endl;
       update_setpoint = false;
     }
@@ -389,7 +381,6 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
         startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
         startCoord[2] = ip.z - configs->alt;
         mission_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
-
         std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading <<
                 ", field_heading: " << mission_status.field_heading <<
                 ", distance: " << mission_status.distance << std::endl;

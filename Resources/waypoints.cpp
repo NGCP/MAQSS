@@ -240,6 +240,11 @@ void waypoints::SetPOI(coordLocalNED coord) {
   POI.push_back(coord);
 }
 
+void waypoints::ClearMission() {
+  wps.clear();
+  POI.clear();
+}
+
 void waypoints::PlotWp(configContainer& configs, CoordFrame output_coord_frame, PlotOutput plot_output) {
   /* Function to plot the current waypoints in a specified coordinate frame and format
    * 

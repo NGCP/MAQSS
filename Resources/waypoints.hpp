@@ -83,6 +83,8 @@ public:
   
   void SetPOI(coordLocalNED coord);
 
+  void ClearMission();
+  
   void SetCurrentWp(int Wp) {
     current_wp = Wp;
   }

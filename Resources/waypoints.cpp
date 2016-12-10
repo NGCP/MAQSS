@@ -32,7 +32,6 @@ void waypoints::CalcFOV() {
   float le = msnHeight / cos(-alpha);
   lv = 2 * sqrt(lc * lc + le * le - 2 * le * lc * cos(alpha));
   lh = (lc / (sin(beta) * sin(beta))) * sin(FOV_H);
-
 }
 
 void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float field_heading, unsigned int pattern) {
@@ -234,6 +233,11 @@ void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float
       return;
       // TODO: Throw GCS a warning and stop mission
   }
+}
+
+void waypoints::SetPOI(coordLocalNED coord) {
+  if (!POI.size()) current_wp = 0; // if first POI, reset current_wp
+  POI.push_back(coord);
 }
 
 void waypoints::PlotWp(configContainer& configs, CoordFrame output_coord_frame, PlotOutput plot_output) {

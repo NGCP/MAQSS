@@ -80,6 +80,8 @@ public:
   waypoints(configContainer *configs);
   void SetWps(coordLocalNED start_coord, int heading, int length, float field_heading = 0.0,
           unsigned int pattern = RECTANGLE);
+  
+  void SetPOI(coordLocalNED coord);
 
   void SetCurrentWp(int Wp) {
     current_wp = Wp;
@@ -103,6 +105,7 @@ public:
   static coordLLA coordAt(coordLLA &LLA, float bearing, float distance);
 
   std::vector<coordLocalNED> wps; // Waypoint coordinates stored in LocalNED frame
+  std::vector<coordLocalNED> POI;
   unsigned int current_wp;
 
   virtual ~waypoints();

@@ -64,17 +64,22 @@ static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
   sleep(2);
 }
 
+static void getPixels(Point center) { //Multiply this by height
+   std::cerr << (center.x - MID_WIDTH) * PIXEL_RATIO; //return pixel offset X coord * PIXEL_RATIO
+   std::cerr << (center.y - MID_HEIGHT) * PIXEL_RATIO; //return pixel offset y coord * PIXEL_RATIO
+}
+/*
 static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
   int xPixels, yPixels;
   Size imgSize = image.size();
   double GSD = (SENSOR_WIDTH * height) / (FOCAL_LENGTH * imgSize.width); //Calculate Ground Sampling Distance
   
   xPixels = center.x - s.width/2; //How far from center?
-  yPixels = center.y - s.width/2;
+  yPixels = center.y - s.height/2;
   
   cout << GSD * xPixels <<endl; //x distance in meters
   cout << GSD * yPixels <<endl; //y distance in meters
-}
+}*/
 
 static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
   cv::Mat channels[3];
@@ -122,6 +127,7 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
       int radius;
 
       cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+      getPixels(center); //Prints pixels to cerr, Just multiply this by height 
       radius = cvRound(circles[i][2]);
       // Draw the circle center
       cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);

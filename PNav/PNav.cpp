@@ -200,7 +200,8 @@ void CallbackFunction(XBEE::Frame *item) {
       std::cerr << "Handle Role Set Message: " << str_data << std::endl;
 
       // Expect Msg: "NEWMSG,ROLE,QX,RX
-      vehicle_status.role = std::stoi(msg_components[3][1]);
+      msg_components[3].erase(0, 1); // store role information
+      vehicle_status.role = std::stoi(msg_components[3].c_str());
       vehicle_status.role_changed = true;
       std::cerr << "Role Set as: " << vehicle_status.role << std::endl;
 
@@ -336,8 +337,19 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       set_position(mission_waypoints.wps[ndx][0],
               mission_waypoints.wps[ndx][1],
               mission_waypoints.wps[ndx][2], sp);
-      std::cerr << "Moving to POI " << ndx << std::endl;
+      autopilot_interface.update_setpoint(sp);
+      std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
       update_setpoint = false;
+    } else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role) {
+      set_position(mission_waypoints.POI[ndx][0],
+              mission_waypoints.POI[ndx][1],
+              mission_waypoints.POI[ndx][2], sp);
+      autopilot_interface.update_setpoint(sp);
+      std::cerr << "Moving to POI " << ndx << std::endl;
+      vehicle_status.status = "Moving";
+      update_setpoint = false;
+    } else if (ndx >= mission_waypoints.POI.size() && vehicle_status.role) {
+      vehicle_status.status = "Idle";
     }
 
     // check current location
@@ -460,6 +472,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       mission_waypoints.current_wp++;
 
       if (vehicle_status.role) { // if detailed, pause for a few seconds
+        vehicle_status.status = "Scanning";
         std::this_thread::sleep_for(std::chrono::milliseconds(2500));
         //        t0_POI = steady_clock::now();
       }
@@ -468,8 +481,6 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     // if current waypoint index is past end of waypoints vector, tell GCS and loiter
     // update stream to Pixhawk
   }
-  std::cerr << "Exiting Comms test loop" << std::endl;
-
   cv_msg = "Exit";
   PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
   autopilot_interface.stop();

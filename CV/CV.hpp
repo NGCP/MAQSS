@@ -18,4 +18,11 @@
 // CV definitions
 #define RED 2
 
+//Localization Definitions
+//#define SENSOR_WIDTH 3.76
+//#define FOCAL_LENGTH 3.6
+#define PIXEL_RATIO 0.00317567567567567567567567567568
+#define MID_WIDTH 160
+#define MID_HEIGHT 90
+
 #endif

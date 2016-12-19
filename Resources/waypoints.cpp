@@ -20,6 +20,8 @@ waypoints::waypoints(configContainer *configs) {
   FOV_V = configs->cam_FOV_v / 57.3;
   FOV_H = configs->cam_FOV_h / 57.3;
   npoints = configs->npoints;
+  msnHeight = configs->alt; // assume local NED z = 0 is ground
+  CalcFOV();
 }
 
 void waypoints::CalcFOV() {
@@ -30,10 +32,9 @@ void waypoints::CalcFOV() {
   float le = msnHeight / cos(-alpha);
   lv = 2 * sqrt(lc * lc + le * le - 2 * le * lc * cos(alpha));
   lh = (lc / (sin(beta) * sin(beta))) * sin(FOV_H);
-
 }
 
-void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float field_heading,unsigned int pattern) {
+void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float field_heading, unsigned int pattern) {
   /* Function to set the searchChunk waypoints given a startCoord, heading, length, and fieldHeading. All setpoints will be in vehicle Local NED frame
    * NOTE: Only pattern type currently supported is RECTANGLE. All other patterns will throw warnings and yield incorrect setpoints
    * 
@@ -65,8 +66,8 @@ void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float
   float theta(0);
   float util(0);
 
-  msnHeight = fabs(start_coord[2]); // assume local NED z = 0 is ground
-  CalcFOV();
+  //  msnHeight = fabs(start_coord[2]); // assume local NED z = 0 is ground
+  //  CalcFOV();
   current_wp = 0; // restart from Wp 0 when new Search Chunk is sent
   wps.clear();
 
@@ -234,6 +235,16 @@ void waypoints::SetWps(coordLocalNED start_coord, int heading, int length, float
   }
 }
 
+void waypoints::SetPOI(coordLocalNED coord) {
+  if (!POI.size()) current_wp = 0; // if first POI, reset current_wp
+  POI.push_back(coord);
+}
+
+void waypoints::ClearMission() {
+  wps.clear();
+  POI.clear();
+}
+
 void waypoints::PlotWp(configContainer& configs, CoordFrame output_coord_frame, PlotOutput plot_output) {
   /* Function to plot the current waypoints in a specified coordinate frame and format
    * 
@@ -314,9 +325,9 @@ coordLocalNED waypoints::LLAtoLocalNED(configContainer& configs, coordLLA &LLA, 
     LLA[0] = LLA[0] * M_PI / 180.0; // convert to radians in necessary
     LLA[1] = LLA[1] * M_PI / 180.0;
   }
-  std::cout << configs.Rne << std::endl;
-  std::cout << configs.originECEF << std::endl;
-  std::cout << configs.Rne * (ECEF - configs.originECEF) << std::endl;
+  //  std::cout << configs.Rne << std::endl;
+  //  std::cout << configs.originECEF << std::endl;
+  //  std::cout << configs.Rne * (ECEF - configs.originECEF) << std::endl;
 
   return configs.Rne * (ECEF - configs.originECEF);
 }
@@ -400,9 +411,9 @@ coordLLA waypoints::ECEFtoLLA(coordECEF &ECEF, AngleType output_angle) {
       break;
     }
   }
-  if (output_angle == AngleType::DEGREES){
-    phi_1 *= 180.0/M_PI;
-    lam *= 180.0/M_PI;
+  if (output_angle == AngleType::DEGREES) {
+    phi_1 *= 180.0 / M_PI;
+    lam *= 180.0 / M_PI;
   }
   return coordLLA(phi_1, lam, h_1);
 }
@@ -424,10 +435,10 @@ coordECEF waypoints::LLAtoECEF(coordLLA &LLA, AngleType input_angle) {
   double X, Y, Z;
 
   if (input_angle == AngleType::DEGREES) {
-    phi *= M_PI/180.0;
-    lam *= M_PI/180.0;
+    phi *= M_PI / 180.0;
+    lam *= M_PI / 180.0;
   }
-  
+
   N = a / sqrt(1 - e2 * pow(sin(phi), 2.0));
   X = (N + h) * cos(phi) * cos(lam);
   Y = (N + h) * cos(phi) * sin(lam);
@@ -511,7 +522,7 @@ coordLLA waypoints::coordAt(coordLLA &LLA, float bearing, float distance) {
   sig_old = distance / (b * A);
 
   while (fabs(sig_old - sig_new) >= tolerance) {
-    std::cout << fabs(sig_old - sig_new) << std::endl;
+    //    std::cout << fabs(sig_old - sig_new) << std::endl;
     if (counter > 0) sig_old = sig_new;
 
     sigM = 2 * sig1 + sig_old;

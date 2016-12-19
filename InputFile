@@ -1,8 +1,10 @@
 # InputFile to specify all configurations
 # NOTE: DO NOT LEAVE lines with blank whitespaces (will be stored into miscParams)
+# Quad Name must be supplied correctly or vehicle will misidentify itself to GCS
 
 ### Required Inputs
 Version=1.0
+Quad=B
 
 ## Pipe Names
 # Pipe for CV to write to PNav (PNav reads from CV)
@@ -44,9 +46,13 @@ npoints=20
 alt=7
 setpoint_tolerance=3.0
 
-## Logging 
+# Debugging
+# Logging
 log=1
 log_freq=2
+
+# Main Loop Delay [ms] (0 for none)
+debug_delay=0
 
 # Specify pattern according to pattern enum in waypoints.hpp
 #enum pattern {
@@ -66,4 +72,3 @@ pattern=0
 
 # These will be stored into misc_Params
 my_Name=Frank
-Quad=B

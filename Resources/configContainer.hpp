@@ -30,8 +30,10 @@ public:
     std::string pipe_PNav_to_CV; // Named pipe for PNAV to write to CV and CV to read from PNAV
     std::string input_filename;
     std::string uart_name;
+    int quad_id; // quad ID (A=0, B=1, C=2)
     bool log = false; // log flight data
     float log_freq = 2; // log frequency in Hz
+    int debug_delay = 0; // delay at each loop of main loop for debugging purposes
     int baudrate = 57600; // microcomputer to flightcontroller baudrate (57600 default)
     int fd_CV_to_PNav;
     int fd_PNav_to_CV;

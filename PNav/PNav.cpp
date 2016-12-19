@@ -80,6 +80,7 @@ void quit_handler(int sig) {
 struct mission_status {
   coordLLA target_LLA;
   std::string msg;
+  std::string mission_type;
   double lat = 0; // [deg]
   double lon = 0; // [deg]
   float alt = 0; // [m]
@@ -93,6 +94,7 @@ struct mission_status {
 
 struct vehicle_status {
   bool start = false; // vehicle mission start/stop status
+  bool role_changed = false; // if role_changes, clear all wps and POI
   unsigned int role = 0;
   double lat;
   double lon;
@@ -142,9 +144,10 @@ void CallbackFunction(XBEE::Frame *item) {
 
     // if-else if branch to determine message type and handling
     if (!strcmp(msg_components[1].c_str(), "MSN") && valid_msg) {
-      // NEWMSG,MSN,Q2,P35.3085519592 -120.668932266 0,H103.29054493,F139.7,D228.8
-      delim = ' ';
+      // NEWMSG,MSN,Q2,P35.3085519592:-120.668932266:0,H103.29054493,F139.7,D228.8
+      delim = ':';
       std::cerr << "Handling Mission Message: " << str_data << std::endl;
+      mission_status.mission_type = "Quick";
 
       // store search_chunk start position
       msg_components[3].erase(0, 1);
@@ -167,6 +170,7 @@ void CallbackFunction(XBEE::Frame *item) {
 
       // set flag to indicate new mission parameters received
       mission_status.changed_flag = true;
+      vehicle_status.role = 0; // change role to quick
 
     } else if (!strcmp(msg_components[1].c_str(), "START") && valid_msg) {
       // NEWMSG,START
@@ -177,8 +181,30 @@ void CallbackFunction(XBEE::Frame *item) {
       std::cerr << "Handle Stop Message: " << str_data << std::endl;
       mission_status.start = false;
     } else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg) {
-      // NEWMSG,POI
+
+      // Expect Msg: "NEWMSG,POI,QX,P35.1234:-120.5678
+      delim = ':';
       std::cerr << "Handle Point of Interest Message: " << str_data << std::endl;
+      mission_status.mission_type = "Detailed";
+
+      // store search_chunk start position
+      msg_components[3].erase(0, 1);
+      position_strings = split(msg_components[3], delim);
+      mission_status.lat = std::stod(position_strings[0]);
+      mission_status.lon = std::stod(position_strings[1]);
+      vehicle_status.role = 1; // change role to detailed
+      mission_status.changed_flag = true;
+
+    } else if (!strcmp(msg_components[1].c_str(), "ROLE") && valid_msg) {
+
+      std::cerr << "Handle Role Set Message: " << str_data << std::endl;
+
+      // Expect Msg: "NEWMSG,ROLE,QX,RX
+      msg_components[3].erase(0, 1); // store role information
+      vehicle_status.role = std::stoi(msg_components[3].c_str());
+      vehicle_status.role_changed = true;
+      std::cerr << "Role Set as: " << vehicle_status.role << std::endl;
+
     } else valid_msg = false;
   }
 
@@ -224,6 +250,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   // Setup Xbee serial interface and start reading
   XBEE::SerialXbee xbee_interface;
   xbee_interface.ReadHandler = std::bind(&CallbackFunction, std::placeholders::_1);
+  //  xbee_interface.Connect();
   xbee_interface.AsyncReadFrame();
 
   // declare variables for mavlink messages
@@ -231,11 +258,11 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   mavlink_set_position_target_local_ned_t ip;
   mavlink_local_position_ned_t lpos;
   mavlink_global_position_int_t gpos;
+  mavlink_position_target_local_ned_t tpos;
   Mavlink_Messages msgs;
-  //    mavlink_position_target_local_ned_t tpos;
 
   // start timer for logging
-  steady_clock::time_point t0_log, t0_heartbeat, t1_log, t1_heartbeat;
+  steady_clock::time_point t0_log, t0_heartbeat, t1_log, t1_heartbeat, t0_POI, t1_POI;
   flight_logger flt_log;
 
   // Setup interrupt handlers so all interfaces get closed
@@ -260,7 +287,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
 
   // instantiate a waypoints class
-  waypoints search_chunk_waypoints(configs);
+  waypoints mission_waypoints(configs);
 
   // Locate LNED frame origin
   // TODO: Implement method which checks LNED origin remains constant throughout flight
@@ -280,7 +307,7 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   else configs->pattern = RECTANGLE; // let GCS specify
 
   // Fly InputFile mission if specified
-  if (configs->head != 999 && configs->dist != 0) search_chunk_waypoints.SetWps(startCoord,
+  if (configs->head != 999 && configs->dist != 0) mission_waypoints.SetWps(startCoord,
           configs->head, configs->dist, configs->field_heading, pattern);
 
   if (pattern == CAM_ALTITUDE_TEST) configs->setpoint_tolerance = 1.0; // reduce setpoint tolerance for camera altitude test to make sure AV stops at each interval
@@ -290,35 +317,56 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
   t0_heartbeat = steady_clock::now();
   ndx = 0;
 
-  // mainloop
+  // main loop
   while (1) {
-    if (vehicle_status.role != 0) {
-      std::cerr << "Vehicle Role is not Quick Scan" << std::endl;
-      break;
+
+    // if role has been changed, clear all current wps or POI
+    if (vehicle_status.role_changed) {
+      mission_waypoints.ClearMission();
+      vehicle_status.role_changed = false;
     }
+
     // GCS reads are handled by the CallbackFunction
     // check if vehicle is in offboard mode
-    offboard = ((0x00060000 & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
+    offboard = ((0x00060000
+            & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
 
     // set current wp
-    ndx = search_chunk_waypoints.current_wp;
-    if (update_setpoint && ndx < search_chunk_waypoints.wps.size()) {
-      set_position(search_chunk_waypoints.wps[ndx][0], search_chunk_waypoints.wps[ndx][1], search_chunk_waypoints.wps[ndx][2], sp);
+    ndx = mission_waypoints.current_wp;
+    if (update_setpoint && (ndx < mission_waypoints.wps.size()) && !vehicle_status.role) {
+      set_position(mission_waypoints.wps[ndx][0],
+              mission_waypoints.wps[ndx][1],
+              mission_waypoints.wps[ndx][2], sp);
       autopilot_interface.update_setpoint(sp);
-      std::cerr << "Updating Setpoint " << ndx << " of " << search_chunk_waypoints.wps.size() << std::endl;
+      std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
+      update_setpoint = false;
+    } else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role) {
+      set_position(mission_waypoints.POI[ndx][0],
+              mission_waypoints.POI[ndx][1],
+              mission_waypoints.POI[ndx][2], sp);
+      autopilot_interface.update_setpoint(sp);
+      std::cerr << "Moving to POI " << ndx << std::endl;
+      vehicle_status.status = "Moving";
+      update_setpoint = false;
+    } else if (ndx >= mission_waypoints.POI.size() && vehicle_status.role) {
+      vehicle_status.status = "Idle";
     }
 
     // check current location
     lpos = autopilot_interface.current_messages.local_position_ned;
     gpos = autopilot_interface.current_messages.global_position_int;
+    tpos = autopilot_interface.current_messages.position_target_local_ned;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    // Check if a delay is commanded for debugging
+    if (!configs->debug_delay)
+      std::this_thread::sleep_for(std::chrono::milliseconds(configs->debug_delay));
 
     // if start command, set flag, (tell CV to start?)
     if (mission_status.start && mission_status.start != vehicle_status.start) {
       // TODO: Implement functionality for start/stop
       std::cerr << "Start commanded" << std::endl;
       vehicle_status.start = true;
+      update_setpoint = true;
       vehicle_status.status = "Started";
     }
 
@@ -326,29 +374,37 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
     if (!mission_status.start && mission_status.start != vehicle_status.start) {
       std::cerr << "Stop commanded" << std::endl;
       vehicle_status.start = false;
+      update_setpoint = false;
       vehicle_status.status = "Online";
+
+      // TODO: Implement clearing of wps?
     }
 
     // if new search_chunk mission msg received, update Waypoint class
     if (mission_status.changed_flag) {
       std::cerr << "New Mission Received" << std::endl;
-      std::cerr << "Starting [lat, lon, alt]: [" << mission_status.lat << ", " << mission_status.lon << ", " << mission_status.alt << "]" << std::endl;
-      std::cerr << "Mission [head, dist]: [" << mission_status.heading << ", " << mission_status.distance << "]" << std::endl;
       mission_status.changed_flag = false;
 
       // calculate wp
-      start_coordLLA << (float) mission_status.lat, (float) mission_status.lon, configs->alt;
-      start_coordLLA[0] = start_coordLLA[0] * M_PI / 180.0; // convert from deg2rad
-      start_coordLLA[1] = start_coordLLA[1] * M_PI / 180.0;
-      startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
-      search_chunk_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
-
-      std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading <<
-              ", field_heading: " << mission_status.field_heading <<
-              ", distance: " << mission_status.distance << std::endl;
-      //      search_chunk_waypoints.PlotWp(*configs);
-      search_chunk_waypoints.PlotWp(*configs, CoordFrame::LLA);
-      std::cerr << std::endl;
+      if (!vehicle_status.role) { // if Quick Search Mission
+        start_coordLLA << (float) mission_status.lat, (float) mission_status.lon, configs->alt;
+        start_coordLLA[0] = start_coordLLA[0] * M_PI / 180.0; // convert from deg2rad
+        start_coordLLA[1] = start_coordLLA[1] * M_PI / 180.0;
+        startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
+        startCoord[2] = ip.z - configs->alt;
+        mission_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
+        std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading <<
+                ", field_heading: " << mission_status.field_heading <<
+                ", distance: " << mission_status.distance << std::endl;
+        mission_waypoints.PlotWp(*configs, CoordFrame::LLA);
+        mission_waypoints.PlotWp(*configs, CoordFrame::LOCAL_NED);
+        std::cerr << std::endl;
+      } else if (vehicle_status.role) { // append a POI waypoint
+        start_coordLLA << (float) mission_status.lat, (float) mission_status.lon, configs->alt;
+        startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA, AngleType::DEGREES);
+        startCoord[2] = ip.z - configs->alt;
+        mission_waypoints.SetPOI(startCoord);
+      }
     }
 
     // if time change > heartbeat_freq, send a GPS location message
@@ -359,8 +415,9 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
       vehicle_status.lat = gpos.lat * 1E-7;
       vehicle_status.lon = gpos.lon * 1E-7;
       vehicle_status.alt = gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,UPDT,Q0,P" + std::to_string(vehicle_status.lat) + " " +
-              std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
+      vehicle_status.gcs_update = "NEWMSG,UPDT,Q" + std::to_string(configs->quad_id) + ",P" +
+              std::to_string(vehicle_status.lat) + ":" +
+              std::to_string(vehicle_status.lon) + ":" + std::to_string(vehicle_status.alt) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       UpdateGCS(xbee_interface);
       t0_heartbeat = steady_clock::now();
@@ -384,13 +441,14 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     // if msg is read and msg says "Done", reset cv_busy flag (function calls should resolve Left -> right)
     if (read(configs->fd_CV_to_PNav, tmp, BUF_LEN) && !strcmp(tmp, "Done")) cv_busy = false;
-    else if (!strcmp(tmp, "Found")) {
+    else if (!strcmp(tmp, "Found") && !vehicle_status.role) {
       mission_status.target_LLA << gpos.lat * 1E-7, gpos.lon * 1E-7, gpos.alt * 1E-3;
-      vehicle_status.gcs_update = "NEWMSG,TGT,Q0,P" + std::to_string(mission_status.target_LLA[0]) + " " +
-              std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
+      vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
+              std::to_string(mission_status.target_LLA[0]) + ":" +
+              std::to_string(mission_status.target_LLA[1]) + ":" + std::to_string(mission_status.target_LLA[2]) +
               ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
-              std::to_string(mission_status.target_LLA[0]) + " " +
-              std::to_string(mission_status.target_LLA[1]) + " " + 
+              std::to_string(mission_status.target_LLA[0]) + ":" +
+              std::to_string(mission_status.target_LLA[1]) + ":" +
               std::to_string(mission_status.target_LLA[2]);
       UpdateGCS(xbee_interface);
     }
@@ -400,19 +458,29 @@ int mainLoop(processInterface *PNav, configContainer *configs) {
 
     // if current location is within tolerance of target setpoint
     // increment current waypoint index
-    if (search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size() &&
-            fabs(lpos.x - sp.x) < configs->setpoint_tolerance &&
-            fabs(lpos.y - sp.y) < configs->setpoint_tolerance &&
-            fabs(lpos.z - sp.z) < configs->setpoint_tolerance) {
+    if ((mission_waypoints.current_wp < mission_waypoints.wps.size()) &&
+            (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
+            (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
+            (fabs(lpos.z - sp.z) < configs->setpoint_tolerance))
+
+      //    if ((search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size()) &&
+      //            (fabs(tpos.x - sp.x) < configs->setpoint_tolerance) &&
+      //            (fabs(tpos.y - sp.y) < configs->setpoint_tolerance) &&
+      //            (fabs(tpos.z - sp.z) < configs->setpoint_tolerance)) 
+    {
       update_setpoint = true;
-      search_chunk_waypoints.current_wp++;
+      mission_waypoints.current_wp++;
+
+      if (vehicle_status.role) { // if detailed, pause for a few seconds
+        vehicle_status.status = "Scanning";
+        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        //        t0_POI = steady_clock::now();
+      }
     }
 
     // if current waypoint index is past end of waypoints vector, tell GCS and loiter
     // update stream to Pixhawk
   }
-  std::cerr << "Exiting Comms test loop" << std::endl;
-
   cv_msg = "Exit";
   PNav->writePipe(configs->fd_PNav_to_CV, cv_msg);
   autopilot_interface.stop();

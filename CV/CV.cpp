@@ -82,7 +82,7 @@ static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
 }*/
 
 static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
-  cv::Mat channels[3];
+  //cv::Mat channels[3];
   bool drawCircles;
   bool found_ball = false;
   size_t i;
@@ -101,10 +101,11 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
   cv::resize(image, image, cv::Size(), 0.25, 0.25, cv::INTER_LINEAR);
 
   // Split the image into 3 channels: red, green, and blue
-  cv::split(image, channels);
+  //cv::split(image, channels);
 
   // Threshold the image, keeping frames that are closer to white (a value of 255)
-  cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
+  //cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
+  cv::inRange(image, cv::Scalar(0,0,0), cv::Scalar(50,25,255), output);
   // Apply a Guassian Blur to smooth out the edges of the image
   cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
   // Use a Hough Transform to find the circles, and store their coordinates relative

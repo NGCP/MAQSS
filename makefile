@@ -5,7 +5,7 @@ CV_DIR=$(CURDIR)/CV/
 MAVLINK_DIR=$(CURDIR)/Resources/
 BUILD_DIR=$(CURDIR)/build/
 XBEE_DIR=$(CURDIR)/../xbeeplus/
-XBEE_LIB_DIR=$(XBEE_DIR)lib/
+XBEE_LIB_DIR=$(XBEE_DIR)src/
 XBEE_INCLUDE_DIR=$(XBEE_DIR)include/
 
 

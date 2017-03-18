@@ -12,3 +12,4 @@ Resources/*
 Pictures/*
 PNav/*
 build/*
+*.o

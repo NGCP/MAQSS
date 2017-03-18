@@ -64,7 +64,7 @@ static void setupCamera(raspicam::RaspiCam_Cv& cam, configContainer *configs) {
   sleep(2);
 }
 
-static void getPixels(Point center) { //Multiply this by height
+static void getPixels(cv::Point center) { //Multiply this by height
    std::cerr << (center.x - MID_WIDTH) * PIXEL_RATIO; //return pixel offset X coord * PIXEL_RATIO
    std::cerr << (center.y - MID_HEIGHT) * PIXEL_RATIO; //return pixel offset y coord * PIXEL_RATIO
 }

@@ -88,6 +88,11 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
   size_t i;
   clock_t t;
 
+static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
+    cv::Mat channels[3];
+    bool drawCircles;
+    size_t i;
+    clock_t t;
 
 #ifdef DEBUG
   drawCircles = true;
@@ -100,26 +105,37 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
   // Resize the image to a quarter of its original dimensions
   cv::resize(image, image, cv::Size(), 0.25, 0.25, cv::INTER_LINEAR);
 
-  // Split the image into 3 channels: red, green, and blue
-  //cv::split(image, channels);
+    // Resize the image to a quarter of its original dimensions
+    cv::resize(image, image, cv::Size(), 0.25, 0.25, cv::INTER_LINEAR);
+    
+    // Split the image into 3 channels: blue, green, and red
+    // Splitting to different channels so we can view one channel SPECIFICALLY.
+    // Viewing one channel highlights specific colors using grayscale colors
+    // (0 being black, 255 being white). We then want to search for white spots,
+    // since this will represent more 'pure' colors of the current color channel.
+    // For example, a white spot on the red color channel is a signifier of there
+    // being an object that is very close to pure red.
+    cv::split(image, channels);
 
-  // Threshold the image, keeping frames that are closer to white (a value of 255)
-  //cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
-  cv::inRange(image, cv::Scalar(0,0,0), cv::Scalar(50,25,255), output);
-  // Apply a Guassian Blur to smooth out the edges of the image
-  cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
-  // Use a Hough Transform to find the circles, and store their coordinates relative
-  // to the frame in a 3-D vector formatted as (x, y, radius)
-  cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 1.0, output.rows / 4, 100, 10, 0, 0);
+    // Threshold the image, keeping frames that are closer to white (a value of 255)
+    // Thresholding the individual color channel allows us to cut out anything below
+    // a specific value on the grayscale spectrum.
+    cv::threshold(channels[BLUE], output, 155, 255, cv::THRESH_BINARY);
+    // Apply a Guassian Blur to smooth out the edges of the image
+    cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
+    // Use a Hough Transform to find the circles, and store their coordinates relative
+    // to the frame in a 3-D vector formatted as (x, y, radius)
+    cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 2.0, output.rows / 4, 100, 10, 0, 6);
 
   t = clock() - t;
 
   fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float) t) / CLOCKS_PER_SEC);
 
-  if (circles.size() > 0) {
-    std::cerr << "Found Ball" << std::endl;
-    found_ball = true;
-  }
+    // Check if anything was added to the circle vector
+    if (circles.size() > 0) {
+       std::cerr << "Found Ball" << std::endl;
+       found_ball = true;
+    }
 
   // If we want to, draw the circles (mostly for debugging purposes)
   if (drawCircles) {
@@ -140,37 +156,34 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
 }
 
 static bool grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& ctr, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
-  int index;
-  bool found_ball = false;
-  std::string imageHeader;
+    int index;
+    bool found_ball = false;
+    std::string imageHeader;
 
   imageHeader = "image";
 
 #ifdef TEST
-  cam.grab();
-  cam.retrieve(image);
-  cv::cvtColor(image, image, cv::COLOR_RGB2BGR));
-  detectBall(nCaptures, image, output, circles);
+    cam.grab();
+    cam.retrieve(image);
+    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+    detectBall(nCaptures, image, output, circles);
 
   cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
 
-  ctr++;
-  nCaptures++;
+    ctr++;
+    nCaptures++;
+
 #else
-  //    for (index = 0; index < 5; index++) {
+   cam.grab();
+   cam.retrieve(image);
+   cv::cvtColor(image, image, CV_RGB2BGR);
+   found_ball = detectBall(nCaptures, image, output, circles);
 
-  cam.grab();
-  cam.retrieve(image);
-  cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-  found_ball = detectBall(nCaptures, image, output, circles);
+   cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
 
-  cv::imwrite(imageHeader + std::to_string(ctr) + "_" + std::to_string(index) + ".jpg", image);
-
-  nCaptures++;
-  //    }
+   nCaptures++;
 #endif
-  
-  return found_ball;
+   return found_ball;
 }
 
 void frameLoop(unsigned int& nCaptures, processInterface *Cv, configContainer *configs) {

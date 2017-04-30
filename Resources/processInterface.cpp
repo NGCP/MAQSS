@@ -52,7 +52,7 @@ processInterface::processInterface(configContainer *configs, int type) {
 
     switch (processType) {
         case PNAV:
-                configs->fd_CV_to_PNav = open(configs->pipe_CV_to_PNav.c_str(), O_RDONLY);
+                configs->fd_CV_to_PNav = open(configs->pipe_CV_to_PNav.c_str(), O_RDONLY|O_NONBLOCK);
 //                std::cerr << configs->pipe_CV_to_PNav << std::endl;
                 configs->fd_PNav_to_CV = open(configs->pipe_PNav_to_CV.c_str(), O_WRONLY);
 //                std::cerr << configs->pipe_PNav_to_CV << std::endl;

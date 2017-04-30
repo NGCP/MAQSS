@@ -16,6 +16,7 @@
 #define START_STR "Start"
 #define EXIT_STR "Exit"
 #define DONE_STR "Done"
+#define FOUND_STR "Found"
 
 
 // CV definitions
@@ -30,6 +31,5 @@
 #define PIXEL_RATIO 0.00317567567567567567567567567568
 #define MID_WIDTH 160
 #define MID_HEIGHT 90
-
 
 #endif

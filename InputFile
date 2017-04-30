@@ -1,8 +1,10 @@
 # InputFile to specify all configurations
 # NOTE: DO NOT LEAVE lines with blank whitespaces (will be stored into miscParams)
+# Quad Name must be supplied correctly or vehicle will misidentify itself to GCS
 
 ### Required Inputs
 Version=1.0
+Quad=B
 
 ## Pipe Names
 # Pipe for CV to write to PNav (PNav reads from CV)
@@ -18,12 +20,13 @@ uart_name=/dev/ttyAMA0
 
 ### Known Inputs (not required)
 baudrate=57600
+heartbeat_freq=0.33
 
 ## RBP Camera Parameters
 # Camera Field of View Estimate
 cam_FOV_v=80
 cam_FOV_h=90
-video_Stabilization=1
+#video_Stabilization=1
 
 # Cam Test Frame Size
 cam_Width=1280
@@ -36,14 +39,20 @@ cam_Test=0
 cap_Freq=0.5
 
 ## Hardcode Mission Parameters
-dist=50
-head=92 
+field_heading=999
+dist=0
+head=999
 npoints=20
 alt=7
+setpoint_tolerance=3.0
 
-## Logging 
+# Debugging
+# Logging
 log=1
 log_freq=2
+
+# Main Loop Delay [ms] (0 for none)
+debug_delay=0
 
 # Specify pattern according to pattern enum in waypoints.hpp
 #enum pattern {
@@ -57,9 +66,9 @@ log_freq=2
 #    
 #    NUM_PATTERNS
 #};
+# NOTE: Only RECTANGLE pattern fully supported
 pattern=0
 ## End Known Inputs
 
 # These will be stored into misc_Params
 my_Name=Frank
-Quad=B

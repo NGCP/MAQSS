@@ -155,6 +155,93 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
   return found_ball;
 }
 
+static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Point> circles) {
+    cv::Mat channels[3];
+    cv::Mat stats;
+    cv::Mat centroids;
+    cv::Mat centers;
+    cv::Mat bw;
+    cv::Mat labels;
+    cv::Point imCenter;
+    std::vector<cv::Point> cc_centers;
+    std::vector<cv::Point> hough_centers;
+    int nLabels;
+    bool drawCircles;
+
+#ifdef DEBUG
+    drawCircles = true;
+#else
+    drawCircles = false;
+#endif
+
+    // Split the image into the three seperate color channels.
+    cv::split(image, channels);
+    // Create a single channel Mat object with every pixel having the value 255;
+    // this allows us to subtract the chosen channel and get the negative image of it.
+    bw = cv::Mat(image.rows, image.cols, channels[BLUE].type(), cv::Scalar(1,1,1) * 255);
+    // Create our negative of the wanted channel.
+    cv::subtract(bw, channels[BLUE], bw);
+    // Use a median blur to remove any binary noise
+    cv::medianBlur(bw, bw, 19);
+    // Create a Mat object that is a single channel and 32-bit for creating labels;
+    // these labels will represent objects found by the connected components algorithm.
+    labels = cv::Mat(image.size(), CV_32S);
+    // Run the connected component algorithm. This will find groups of pixels that can
+    // be classified as belonging to the same object. A few useful things this lets learn
+    // is the rough area of the found object and the center of the object.
+    // The function returns the number of labeled areas, and we store that for later use.
+    // Labels for an object start at 1, since objects starting at 0 would just be considered
+    // background pixels.
+    nLabels = cv::connectedComponentsWithStats(bw, labels, stats, centroids, 8);
+    // Determine where the center of the image is, to calculate the offset of the found object.
+    imCenter = cv::Point(image.cols / 2, image.rows / 2);
+    // Loop through the different labeled objects, checking the areas and finding the centers.
+    for (int i = 1; i < nLabels; i++) {
+        int area;
+	// First check the area of the object.
+	area = stats.at<int>(i, cv::CC_STAT_AREA);
+	// We have a rought idea of what the area of the object is, so check within
+	// those limits.
+	if (area > CC_MIN_AREA && area < CC_MAX_AREA) {
+	    cv::Point center(cvRound(centroids.at<double>(i, 0), cvRound(cenotrids.at<double>(i, 1));
+	    centers.push_back(center);
+	}
+    }
+    // Perform a Hough Circle Transform to detect circles within the image.
+    cv::HoughCircles(bw, hough_centers, cv::HOUGH_GRADIENT, 2.0, image.rows / 4, 100, 10, 20, 100);
+    // Loop through the center points for the circles we found.
+    for (int i = 0; i < circles.size(); i++) {
+
+	cv::Point center(cvRound(hough_centers[i][0]), cvRound(hough_centers[i][1]));
+	// Loop through the labeled points we stored, checking to see if they are
+	// roughly equivalent to our circle center points.
+	for (int j = 0; j < centers.size(); j++) {
+	    cv::Point check = centers.at(j);
+
+	    if (center.x > check.x - POINT_TOLERANCE && center.x < check.x + POINT_TOLERANCE
+		&& center.y > check.y - POINT_TOLERANCE && center.y < check.y + POINT_TOLERANCE) {
+	        // Add the point to our output vector.
+		circles.push_back(center);
+		// Find the offset from the center of the image.
+		cv::Point offset = cv:Point(imCenter.x - center.x, imCenter.y - center.y);
+		// Add to the vector
+		//circles.push_back(offset);
+		found_ball = true;
+		// Draw a circle for debugging purposes if we want to.
+		if (drawCircles) {
+		    int radius;
+
+            	    radius = cvRound(circles[i][2]);
+                    // Draw the circle center
+            	    cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+            	    // Draw the circle outline
+           	    cv::circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+		}
+	    }
+	}
+    }
+}
+
 static bool grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& ctr, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
     int index;
     bool found_ball = false;

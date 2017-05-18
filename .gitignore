@@ -11,3 +11,5 @@ CV/BlobDetection.*
 Resources/*
 Pictures/*
 PNav/*
+build/*
+*.o

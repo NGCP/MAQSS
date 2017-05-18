@@ -16,6 +16,7 @@
 #define START_STR "Start"
 #define EXIT_STR "Exit"
 #define DONE_STR "Done"
+#define FOUND_STR "Found"
 
 
 // CV definitions
@@ -31,10 +32,5 @@
 #define MID_WIDTH 160
 #define MID_HEIGHT 90
 
-
-// Detailed Search definitions
-#define CC_MIN_AREA 11000
-#define CC_MAX_AREA 12200
-#define POINT_TOLERANCE 10
 
 #endif

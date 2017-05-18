@@ -30,11 +30,14 @@ public:
     std::string pipe_PNav_to_CV; // Named pipe for PNAV to write to CV and CV to read from PNAV
     std::string input_filename;
     std::string uart_name;
+    int quad_id; // quad ID (A=0, B=1, C=2)
     bool log = false; // log flight data
     float log_freq = 2; // log frequency in Hz
+    int debug_delay = 0; // delay at each loop of main loop for debugging purposes
     int baudrate = 57600; // microcomputer to flightcontroller baudrate (57600 default)
     int fd_CV_to_PNav;
     int fd_PNav_to_CV;
+    float heartbeat_freq = 0.5; // rate to send heartbeats to GCS[1/s]
     
     // Hardcoded Mission Parameters
     unsigned int npoints = 25; // number of waypoints to generate for flight pattern
@@ -42,6 +45,8 @@ public:
     int head = 999; // compass heading (deg) which can be set from InputFile. Leave as 999 to let GCS specify
     int dist = 0; // distance parameter for mission in meters. Leave as 0 to let GCS specify
     int alt = 7; // altitude to fly mission at [m]
+    float field_heading = 139; // fieldHeading in degrees
+    float setpoint_tolerance = 3.0; // distance in meters to reach to current setpoint before moving onto next setpoint [m]]
     
     // Camera Parameters
     unsigned int cam_Width = 1920; // image capture resolution (pixels)

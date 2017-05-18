@@ -32,4 +32,9 @@
 #define MID_HEIGHT 90
 
 
+// Detailed Search definitions
+#define CC_MIN_AREA 11000
+#define CC_MAX_AREA 12200
+#define POINT_TOLERANCE 10
+
 #endif

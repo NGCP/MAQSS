@@ -203,8 +203,7 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
 	// We have a rought idea of what the area of the object is, so check within
 	// those limits.
 	if (area > CC_MIN_AREA && area < CC_MAX_AREA) {
-	    cv::Point center(cvRound(centroids.at<double>(i, 0),
-			     cvRound(cenotrids.at<double>(i, 1));
+	    cv::Point center(cvRound(centroids.at<double>(i, 0), cvRound(cenotrids.at<double>(i, 1));
 	    centers.push_back(center);
 	}
     }
@@ -225,7 +224,8 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
 		circles.push_back(center);
 		// Find the offset from the center of the image.
 		cv::Point offset = cv:Point(imCenter.x - center.x, imCenter.y - center.y);
-		circles.push_back(offset);
+		// Add to the vector
+		//circles.push_back(offset);
 		found_ball = true;
 		// Draw a circle for debugging purposes if we want to.
 		if (drawCircles) {

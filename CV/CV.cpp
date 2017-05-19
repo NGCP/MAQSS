@@ -82,17 +82,11 @@ static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
 }*/
 
 static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
-  //cv::Mat channels[3];
-  bool drawCircles;
-  bool found_ball = false;
-  size_t i;
-  clock_t t;
-
-static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {
     cv::Mat channels[3];
     bool drawCircles;
     size_t i;
     clock_t t;
+    bool found_ball = false;
 
 #ifdef DEBUG
   drawCircles = true;
@@ -167,6 +161,7 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
     std::vector<cv::Point> hough_centers;
     int nLabels;
     bool drawCircles;
+    bool found_ball = false;
 
 #ifdef DEBUG
     drawCircles = true;
@@ -240,6 +235,10 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
 	    }
 	}
     }
+    if (circles.size())
+        found_ball = true;
+
+    return found_ball;
 }
 
 static bool grabFrame(raspicam::RaspiCam_Cv& cam, unsigned int& nCaptures, int& ctr, cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f>& circles) {

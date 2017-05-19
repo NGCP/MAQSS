@@ -86,6 +86,7 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
     bool drawCircles;
     size_t i;
     clock_t t;
+    bool found_ball = false;
 
 #ifdef DEBUG
   drawCircles = true;

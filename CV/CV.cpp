@@ -149,7 +149,7 @@ static bool detectBall(const unsigned int& nCaptures, cv::Mat& image, cv::Mat& o
   return found_ball;
 }
 
-static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Point> circles) {
+static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Vec3f> circles) {
     cv::Mat channels[3];
     cv::Mat stats;
     cv::Mat centroids;
@@ -235,8 +235,6 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
 	    }
 	}
     }
-    if (circles.size())
-        found_ball = true;
 
     return found_ball;
 }

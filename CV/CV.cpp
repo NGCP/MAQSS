@@ -235,8 +235,6 @@ static bool detailedSearch(cv::Mat& image, cv::Mat& output, std::vector<cv::Poin
 	    }
 	}
     }
-    if (circles.size())
-        found_ball = true;
 
     return found_ball;
 }

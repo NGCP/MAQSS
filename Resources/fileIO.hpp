@@ -30,4 +30,3 @@ private:
 };
 
 #endif /* FILEIO_HPP */
-

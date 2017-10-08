@@ -153,6 +153,7 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 void fileIO::printConfig(configContainer *configs) {
   std::cerr << "Printing Configuration:" << std::endl;
   std::cerr << "MAQSS Version: " << configs->version << std::endl;
+  std::cerr << "Quad: " << configs->quad_id << std::endl;
   std::cerr << std::endl;
 
   std::cerr << "Interface Parameters:" << std::endl;
@@ -191,4 +192,3 @@ void fileIO::printConfig(configContainer *configs) {
 
 fileIO::~fileIO() {
 }
-

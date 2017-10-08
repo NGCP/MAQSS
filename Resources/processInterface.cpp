@@ -104,4 +104,3 @@ void processInterface::cleanup(configContainer *configs) {
 
 processInterface::~processInterface() {
 }
-

@@ -301,4 +301,3 @@ private:
 
 #endif // AUTOPILOT_INTERFACE_H_
 
-

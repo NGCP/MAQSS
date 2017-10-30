@@ -268,7 +268,7 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &
   return found_ball;
 }
 
-void frameLoop(unsigned int &nCaptures, configContainer *configs)
+void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger)
 {
   bool nextFrame;
   int ctr;

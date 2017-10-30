@@ -12,6 +12,7 @@
 #include "offboard.hpp"
 #include "PNav.hpp"
 #include "CV.hpp"
+#include "log.hpp"
 
 //PNav_to_CV functions
 PNav_to_CV::PNav_to_CV() {
@@ -98,6 +99,7 @@ void quit_handler(int sig) {
 int main(int argc, char **argv) {
     configContainer configs;
     unsigned int nCaptures;
+    Log Logger;
 
     if (argc > 1)
         configs = fileIO::getConfig(argc, argv);
@@ -115,8 +117,8 @@ int main(int argc, char **argv) {
     }
     else{
         CeeToPee.set_CV_found(false);
-        std::thread CV_thread(frameLoop, std::ref(nCaptures), std::ref(configPointer));
-        std::thread PNav_thread(PNavLoop, std::ref(configPointer));
+        std::thread CV_thread(frameLoop, std::ref(nCaptures), std::ref(configPointer), std::ref(Logger));
+        std::thread PNav_thread(PNavLoop, std::ref(configPointer), std::ref(Logger));
         CV_thread.join();
         PNav_thread.join();
     }

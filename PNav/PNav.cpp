@@ -32,15 +32,10 @@
 #include <SerialXbee.hpp>
 #include <ReceivePacket.hpp>
 #include <TransmitRequest.hpp>
+#include "PNav.hpp"
 
 // TODO: Have karthik fix my makefile
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
-
-// ------------------------------------------------------------------------------
-//   Quit Signal Handler
-// ------------------------------------------------------------------------------
-// this function is called when you press Ctrl-C
-#define GCS_MAC 0x0013A20040F8064C
 
 bool PNav_shutdown = false;
 Autopilot_Interface *autopilot_interface_quit;

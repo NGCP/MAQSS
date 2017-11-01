@@ -6,7 +6,7 @@ CV_DIR=$(CURDIR)/CV/
 LOG_DIR=$(CURDIR)/Logging
 MAVLINK_DIR=$(CURDIR)/Resources/
 BUILD_DIR=$(CURDIR)/build/
-XBEE_DIR=/home/pi/multitest/xbeeplus/
+XBEE_DIR=$(CURDIR)/Resources/xbeeplus/
 XBEE_LIB_DIR=$(XBEE_DIR)src/
 XBEE_INCLUDE_DIR=$(XBEE_DIR)include/
 

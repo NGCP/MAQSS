@@ -4,6 +4,12 @@
 #include "spdlog/spdlog.h"
 #include <string>
 
+// Literals for directories logs appear in
+#define LOG_DIR "./logs"
+#define LOG_1 "/log1"
+#define LOG_2 "/log2"
+#define LOG_3 "/log3"
+
 class Log {
     public: 
 

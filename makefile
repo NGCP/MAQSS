@@ -40,6 +40,7 @@ PNav : $(PNAV_DIR)PNav.o  $(SHARED_O) $(XBEE_LIB_DIR)SerialXbee.o
 	$(CXX) $(PNAV_DIR)PNav.o $(SHARED_O) $(XBEE_LIB_DIR)SerialXbee.o -o $(BUILD_DIR)PNav $(PNAV_LIBS) -I$(XBEE_INCLUDE_DIR) -L$(XBEE_DIR)build -lboost_system -lboost_thread -lxbee_plus
 	
 offboard : $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o $(PNAV_DIR)PNav.o $(XBEE_LIB_DIR)SerialXbee.o 
+	mkdir -p build
 	$(CXX) $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o $(PNAV_DIR)PNav.o $(XBEE_LIB_DIR)SerialXbee.o -o $(BUILD_DIR)offboard $(PNAV_LIBS) $(CV_LIBS) -I$(XBEE_INCLUDE_DIR) -L$(XBEE_DIR)build -lboost_system -lboost_thread -lxbee_plus
 
 # Compilation Commands
@@ -71,6 +72,7 @@ $(XBEE_LIB_DIR)SerialXbee.o :
 	$(CXX) $(CXXFLAGS) -c $(XBEE_LIB_DIR)SerialXbee.cpp -o $(XBEE_LIB_DIR)SerialXbee.o -I$(XBEE_INCLUDE_DIR)
 
 $(LOG_DIR)log.o :
+	mkdir -p build/logs
 	$(CXX) $(CXXFLAGS) -c -lpthread $(LOG_DIR)log.cpp -o $(LOG_DIR)log.o -I$(LOG_DIR);
 	
 ## make each .o file have a dependency for its corresponding .cpp file
@@ -94,7 +96,7 @@ proc:
 .PHONY: clean run runOffboard proc
 	
 cleanTemp:  
-	rm $(PNAV_DIR)*.o $(CV_DIR)*.o $(OFFBOARD_DIR)*.o
+	rm $(PNAV_DIR)*.o $(CV_DIR)*.o $(OFFBOARD_DIR)*.o $(LOG_DIR)*.o
 
 clean:
-	rm $(PNAV_DIR)*.o $(RESOURCES_DIR)*.o $(CV_DIR)*.o $(BUILD_DIR)offboard $(XBEE_LIB_DIR)*.o $(OFFBOARD_DIR)*.o
+	rm $(PNAV_DIR)*.o $(RESOURCES_DIR)*.o $(CV_DIR)*.o $(BUILD_DIR)offboard $(XBEE_LIB_DIR)*.o $(OFFBOARD_DIR)*.o $(LOG_DIR)*.o

@@ -5,9 +5,9 @@ Log::Log() {
     console->info("spdlog logging to stdout") ;
     console->info("An info message example {}..", 1);
 
-    logger1 = spdlog::basic_logger_mt("logger1", "log1/log");
-    logger2 = spdlog::basic_logger_mt("logger2", "log2/log");
-    logger3 = spdlog::basic_logger_mt("logger3", "log3/log");
+    logger1 = spdlog::basic_logger_mt("logger1", LOG_DIR LOG_1);
+    logger2 = spdlog::basic_logger_mt("logger2", LOG_DIR LOG_2);
+    logger3 = spdlog::basic_logger_mt("logger3", LOG_DIR LOG_3);
 }
 
 void Log::level1_log(std::string msg) {

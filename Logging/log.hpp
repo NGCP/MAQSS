@@ -6,17 +6,19 @@
 
 // Literals for directories logs appear in
 #define LOG_DIR "./logs"
-#define LOG_1 "/log1"
-#define LOG_2 "/log2"
-#define LOG_3 "/log3"
+#define LOG_1 "/leve11"
+#define LOG_2 "/level2"
+#define LOG_3 "/level3"
+
+#define SCRIPT_PATH "../Logging/create_log.sh"
 
 class Log {
     public: 
 
     Log();
-    void level1_log(std::string);
-    void level2_log(std::string);
-    void level3_log(std::string);
+    void level1(std::string);
+    void level2(std::string);
+    void level3(std::string);
 
     private:
 

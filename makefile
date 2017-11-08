@@ -73,7 +73,7 @@ $(XBEE_LIB_DIR)SerialXbee.o :
 
 $(LOG_DIR)log.o :
 	mkdir -p build/logs
-	$(CXX) $(CXXFLAGS) -c -lpthread $(LOG_DIR)log.cpp -o $(LOG_DIR)log.o -I$(LOG_DIR);
+	$(CXX) $(CXXFLAGS) -c -lpthread $(LOG_DIR)log.cpp -o $(LOG_DIR)log.o -I$(LOG_DIR)
 	
 ## make each .o file have a dependency for its corresponding .cpp file
 ## source file is dependency ($<), target file is output ($@)

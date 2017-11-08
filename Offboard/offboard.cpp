@@ -101,10 +101,12 @@ int main(int argc, char **argv) {
     unsigned int nCaptures;
     Log Logger;
 
+    Logger.level1("Offboard started");
+
     if (argc > 1)
         configs = fileIO::getConfig(argc, argv);
     else {
-        std::cerr << "Must specify command line arguements" << std::endl;
+        Logger.level2("Must specify command line arguments");
         exit(EXIT_FAILURE);
     }
     fileIO::printConfig(&configs);

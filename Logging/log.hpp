@@ -6,7 +6,7 @@
 
 // Literals for directories logs appear in
 #define LOG_DIR "./logs"
-#define LOG_1 "/leve11"
+#define LOG_1 "/level1"
 #define LOG_2 "/level2"
 #define LOG_3 "/level3"
 

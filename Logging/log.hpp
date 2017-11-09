@@ -10,6 +10,10 @@
 #define LOG_2 "/level2"
 #define LOG_3 "/level3"
 
+#define LOG_1_NAME "all"
+#define LOG_2_NAME "internal-error"
+#define LOG_3_NAME "external-error"
+
 #define SCRIPT_PATH "../Logging/create_log.sh"
 
 class Log {

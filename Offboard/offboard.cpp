@@ -13,11 +13,16 @@
 #include "PNav.hpp"
 #include "CV.hpp"
 
+/*
+ * CeeToPee and PeeToCee are used to communicate safely between the CV thread
+ * and the navigation thread.
+ */
+
 //PNav_to_CV functions
 PNav_to_CV::PNav_to_CV() {
     CV_start_ = false;
     CV_exit_ = false;
-    role = 0; //Auto set to quicksearch
+    role = QUICK_SEARCH; //Auto set to quicksearch
 }
 
 bool PNav_to_CV::CV_start() const {
@@ -122,4 +127,3 @@ int main(int argc, char **argv) {
     }
     exit(EXIT_SUCCESS);
 }
-

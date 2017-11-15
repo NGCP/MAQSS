@@ -35,105 +35,160 @@
 
 raspicam::RaspiCam_Cv *cam_quit;
 
-void CV_call_stop()
-{
+void CV_call_stop() {
   cam_quit->release();
   exit(1);
 }
 
-static void setupCamera(raspicam::RaspiCam_Cv &cam, configContainer *configs)
-{
+static void setupCamera(raspicam::RaspiCam_Cv &cam, configContainer *configs) {
+    cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
+    cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
+    cam.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+    cam.set(CV_CAP_PROP_BRIGHTNESS, BRIGHTNESS);
+    cam.set(CV_CAP_PROP_CONTRAST, CONTRAST);
+    cam.set(CV_CAP_PROP_SATURATION, SATURATION);
+    cam.set(CV_CAP_PROP_GAIN, GAIN);
 
-  cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
-  cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
-  cam.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-  cam.set(CV_CAP_PROP_BRIGHTNESS, BRIGHTNESS);
-  cam.set(CV_CAP_PROP_CONTRAST, CONTRAST);
-  cam.set(CV_CAP_PROP_SATURATION, SATURATION);
-  cam.set(CV_CAP_PROP_GAIN, GAIN);
-
-  if (!cam.open())
-  {
-    fprintf(stderr, "\nCamera has not been opened. Exiting...\n");
-    throw std::runtime_error("Camera failed to open.\n");
-    exit(EXIT_FAILURE);
-  }
-
-  sleep(2);
-}
-
-/*
-static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
-  int xPixels, yPixels;
-  Size imgSize = image.size();
-  double GSD = (SENSOR_WIDTH * height) / (FOCAL_LENGTH * imgSize.width); //Calculate Ground Sampling Distance
-  
-  xPixels = center.x - s.width/2; //How far from center?
-  yPixels = center.y - s.width/2;
-  
-  cout << GSD * xPixels <<endl; //x distance in meters
-  cout << GSD * yPixels <<endl; //y distance in meters
-}*/
-
-static bool detectBall(const unsigned int &nCaptures, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles)
-{
-  cv::Mat channels[3];
-  cv::Mat bw;
-  bool drawCircles;
-  bool found_ball = false;
-  size_t i;
-  clock_t t;
-
-//#ifdef DEBUG
-  drawCircles = true;
-//#else
-//  drawCircles = false;
-//#endif
-
-  t = clock();
-
-  // Resize the image to a quarter of its original dimensions
-  cv::resize(image, image, cv::Size(), 0.25, 0.25, cv::INTER_LINEAR);
-
-  // Split the image into 3 channels: red, green, and blue
-  cv::split(image, channels);
-
-  // Threshold the image, keeping frames that are closer to white (a value of 255)
-  cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
-  // Use a median blur to remove any binary noise
-  cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
-  // Use a Hough Transform to find the circles, and store their coordinates relative
-  // to the frame in a 3-D vector formatted as (x, y, radius)
-  cv::HoughCircles(output, circles, cv::HOUGH_GRADIENT, 1.0, output.rows / 4, 100, 10, 4, 10);
-
-  t = clock() - t;
-
-  //fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float) t) / CLOCKS_PER_SEC);
-
-  if (circles.size() > 0)
-  {
-    std::cerr << "Found Ball" << std::endl;
-    found_ball = true;
-  }
-
-  // If we want to, draw the circles (mostly for debugging purposes)
-  if (drawCircles)
-  {
-
-    for (i = 0; i < circles.size(); i++)
-    {
-      int radius;
-
-      cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-      radius = cvRound(circles[i][2]);
-      // Draw the circle center
-      cv::circle(output, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
-      // Draw the circle outline
-      cv::circle(output, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+    if (!cam.open()) {
+        fprintf(stderr, "\nCamera has not been opened. Exiting...\n");
+        throw std::runtime_error("Camera failed to open.\n");
+        exit(EXIT_FAILURE);
     }
-  }
-  return found_ball;
+    sleep(2);
 }
+
+static bool detectBall(const unsigned int &nCaptures, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles) {
+    cv::Mat channels[3], bw;
+    bool drawCircles, found_ball = false;
+    size_t i;
+    //clock_t t;
+
+    //t = clock();
+
+    //Threshold the image, keeping only red pixels
+    Mat lowerRed, upperRed;
+    inRange(hsvImage, Scalar(0,100,100), Scalar(10, 255, 255), lowerRed);
+    inRange(hsvImage, Scalar(160,100,100), Scalar(179, 255, 255), upperRed);
+
+    //Combine lower and upper red matrices
+    addWeighted(lowerRed, 1.0, upperRed, 1.0, 0.0, output);
+
+    //Apply guassian blur to red hue Image
+    GaussianBlur(output, output, Size(9,9), 2, 2);
+
+    //Apply Hough Transform to detect circles in redImage
+    HoughCircles(output, circles, CV_HOUGH_GRADIENT, 1, output.rows/8, 100, 20, 0, 0);
+
+    //t = clock() - t;
+
+    //fprintf(stderr, "\n\nImage %d took %f seconds.\n\n", nCaptures, ((float) t) / CLOCKS_PER_SEC);
+
+    if (circles.size() > 0) {
+        std::cerr << "Found Ball" << std::endl;
+        found_ball = true;
+    }
+
+    //#ifdef DEBUG
+        //drawCircles(input, circles)
+    //#endif
+    return found_ball;
+}
+
+static void drawCircles(cv::Mat *image, std::vector<cv::Vec3f> &circles) {
+    for (int i = 0; i < circles.size(); i++) {
+        int radius;
+        cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        radius = cvRound(circles[i][2]);
+        // Draw the circle center
+        cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+        // Draw the circle outline
+        cv::circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+    }
+}
+
+static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &ctr, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles) {
+    int role = 0;
+    bool found_ball = false;
+    std::string imageHeader = "image";
+
+    cam.grab();
+    cam.retrieve(image);
+    // Convert image to HSV color space from RGB
+    cv::cvtColor(image, image, cv::COLOR_BGR2HSV);
+
+    // Write the full size image to file
+    cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
+
+    // Get what type of search the drone is running from the PNav thread
+    role = PeeToCee.get_role();
+
+    if (role == QUICK_SEARCH) {
+        found_ball = detectBall(nCaptures, image, output, circles);
+    }
+    else if (role == DEPTH_SEARCH) {
+
+        CeeToPee.CV_lock();
+        found_ball = detectBall(nCaptures, image, output, circles);
+        CeeToPee.CV_unlock();
+        //Stop it from running
+        PeeToCee.set_CV_start(false);
+    }
+    //#ifdef DEBUG
+        //Print output image for debugging
+        //cv::imwrite("output" + std::to_string(ctr) + ".jpg",output);
+    //#endif
+    return found_ball;
+}
+
+void frameLoop(unsigned int &nCaptures, configContainer *configs) {
+    bool nextFrame, CV_found;
+    int ctr = 1;
+
+    raspicam::RaspiCam_Cv cam;
+    cv::Mat image, output;
+    std::vector<cv::Vec3f> circles;
+    std::cerr << "Before camera setup\n";
+    // Setup camera interface
+    cam_quit = &cam;
+    setupCamera(cam, configs);
+    std::cerr << "CV thread is made\n";
+
+    nextFrame = true;
+    while (nextFrame) {
+        if (PeeToCee.CV_start()) {
+            if (grabFrame(cam, nCaptures, ctr, image, output, circles)) {
+                CeeToPee.set_CV_found(CV_found);
+            }
+            ctr++;
+            nextFrame = nCaptures++ > MAX_IMGS ? false : true;
+        }
+    }
+    cam.release();
+}
+
+// Run CV process in test mode to continually take up to 2000 images
+void testLoop(unsigned int &nCaptures, configContainer *configs) {
+    int ctr;
+    raspicam::RaspiCam_Cv cam;
+    cv::Mat image, output;
+    std::vector<cv::Vec3f> circles;
+
+    float cap_freq = configs->cap_Freq;
+
+    // set up camera interface
+    setupCamera(cam, configs);
+
+    ctr = 1;
+
+    // start capturing upto MAX_IMGS images
+    while (nCaptures < MAX_IMGS && PeeToCee.CV_start()) {
+        std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1 / cap_freq << "/s" << std::endl;
+        grabFrame(cam, nCaptures, ctr, image, output, circles);
+        sleep(1.0 / cap_freq);
+    }
+    cam.release();
+}
+
 /*
 static bool detailedSearch(cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> circles)
 {
@@ -237,97 +292,15 @@ static bool detailedSearch(cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3
 }
 */
 
-static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &ctr, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles)
-{
-  int role = 0;
-  bool found_ball = false;
-  std::string imageHeader;
+/*
+static void convertPixelsToMeters(Point center, double height, cv::Mat& image) {
+  int xPixels, yPixels;
+  Size imgSize = image.size();
+  double GSD = (SENSOR_WIDTH * height) / (FOCAL_LENGTH * imgSize.width); //Calculate Ground Sampling Distance
 
-  imageHeader = "image";
+  xPixels = center.x - s.width/2; //How far from center?
+  yPixels = center.y - s.width/2;
 
-  cam.grab();
-  cam.retrieve(image);
-  cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-  //Print full size Image
-  cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
-  role = PeeToCee.get_role();
-  if (role == 0)
-  { //QuickSearch
-    found_ball = detectBall(nCaptures, image, output, circles);
-  }
-  else if (role == 1)
-  { //Detailed Search
-    CeeToPee.CV_lock();
-    found_ball = detectBall(nCaptures, image, output, circles);
-    CeeToPee.CV_unlock();
-    PeeToCee.set_CV_start(false); //Stop it from running
-  }
-  //Print output image for debugging
-  cv::imwrite("output" + std::to_string(ctr) + ".jpg",output);
-
-  return found_ball;
-}
-
-void frameLoop(unsigned int &nCaptures, configContainer *configs)
-{
-  bool nextFrame;
-  int ctr;
-  bool CV_found;
-
-  raspicam::RaspiCam_Cv cam;
-  cv::Mat image, output;
-  std::vector<cv::Vec3f> circles;
-  std::cerr << "Before camera setup\n";
-  // Setup camera interface
-  cam_quit = &cam;
-  setupCamera(cam, configs);
-  std::cerr << "CV thread is made\n";
-
-  nextFrame = true;
-  ctr = 1;
-  while (nextFrame)
-  {
-    if (PeeToCee.CV_start())
-    {
-      CV_found = grabFrame(cam, nCaptures, ctr, image, output, circles);
-      if (CV_found)
-      {
-        CeeToPee.set_CV_found(CV_found);
-      }
-
-      ctr++;
-
-      nextFrame = nCaptures++ > MAX_IMGS ? false : true;
-    }
-  }
-  cam.release();
-}
-
-// Run CV process in test mode to continually take up to 2000 images
-
-void testLoop(unsigned int &nCaptures, configContainer *configs)
-{
-  int ctr;
-
-  raspicam::RaspiCam_Cv cam;
-  cv::Mat image, output;
-  std::vector<cv::Vec3f> circles;
-
-  float cap_freq = configs->cap_Freq;
-
-  // set up camera interface
-  setupCamera(cam, configs);
-
-  ctr = 1;
-
-  // start capturing upto MAX_IMGS images
-  while (nCaptures < MAX_IMGS && PeeToCee.CV_start())
-  {
-    std::cerr << "In Loop, image: " << nCaptures << " @freq:" << 1 / cap_freq << "/s" << std::endl;
-
-    grabFrame(cam, nCaptures, ctr, image, output, circles);
-
-    sleep(1.0 / cap_freq);
-  }
-  cam.release();
-}
+  cout << GSD * xPixels <<endl; //x distance in meters
+  cout << GSD * yPixels <<endl; //y distance in meters
+}*/

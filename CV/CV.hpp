@@ -3,6 +3,10 @@
 
 #define MAX_IMGS 5000
 
+//Search Modes
+#define QUICK_SEARCH 0
+#define DEPTH_SEARCH 1
+
 // Camera settings
 #define BRIGHTNESS 50.0f
 #define CONTRAST 50.0f

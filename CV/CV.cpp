@@ -113,6 +113,10 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &
 
     cam.grab();
     cam.retrieve(image);
+
+    // Reduce image noise
+    medianBlur(image, image, 3);
+    
     // Convert image to HSV color space from RGB
     cv::cvtColor(image, image, cv::COLOR_BGR2HSV);
 

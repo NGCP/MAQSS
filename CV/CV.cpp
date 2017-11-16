@@ -67,17 +67,17 @@ static bool detectBall(const unsigned int &nCaptures, cv::Mat &image, cv::Mat &o
 
     //Threshold the image, keeping only red pixels
     Mat lowerRed, upperRed;
-    inRange(hsvImage, Scalar(0,100,100), Scalar(10, 255, 255), lowerRed);
-    inRange(hsvImage, Scalar(160,100,100), Scalar(179, 255, 255), upperRed);
+    cv::inRange(hsvImage, cv::Scalar(0,100,100), cv::Scalar(10, 255, 255), lowerRed);
+    cv::inRange(hsvImage, cv::Scalar(160,100,100), cv::Scalar(179, 255, 255), upperRed);
 
     //Combine lower and upper red matrices
-    addWeighted(lowerRed, 1.0, upperRed, 1.0, 0.0, output);
+    cv::addWeighted(lowerRed, 1.0, upperRed, 1.0, 0.0, output);
 
     //Apply guassian blur to red hue Image
-    GaussianBlur(output, output, Size(9,9), 2, 2);
+    cv::GaussianBlur(output, output, cv::Size(9,9), 2, 2);
 
     //Apply Hough Transform to detect circles in redImage
-    HoughCircles(output, circles, CV_HOUGH_GRADIENT, 1, output.rows/8, 100, 20, 0, 0);
+    cv::HoughCircles(output, circles, cv::CV_HOUGH_GRADIENT, 1, output.rows/8, 100, 20, 0, 0);
 
     //t = clock() - t;
 
@@ -115,8 +115,8 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &
     cam.retrieve(image);
 
     // Reduce image noise
-    medianBlur(image, image, 3);
-    
+    cv::medianBlur(image, image, 3);
+
     // Convert image to HSV color space from RGB
     cv::cvtColor(image, image, cv::COLOR_BGR2HSV);
 

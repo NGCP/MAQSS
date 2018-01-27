@@ -38,7 +38,9 @@
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
 
 bool PNav_shutdown = false;
+#ifndef EMULATION
 Autopilot_Interface *autopilot_interface_quit;
+#endif
 Serial_Port *serial_port_quit;
 
 void PNav_call_stop()
@@ -258,7 +260,9 @@ void PNavLoop(configContainer *configs)
 
   // Setup Autopilot interface
   Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
+  #ifndef EMULATION
   Autopilot_Interface autopilot_interface(&serial_port);
+  #endif
 
   std::cerr << "Before xbee initialization\n";
   // Setup Xbee serial interface and start reading
@@ -281,21 +285,30 @@ void PNavLoop(configContainer *configs)
   flight_logger flt_log;
 
   serial_port_quit = &serial_port;
+  #ifndef EMULATION
   autopilot_interface_quit = &autopilot_interface;
+  #endif
 
   //  Start interface and take initial position
   serial_port.start();
+  #ifndef EMULATION
   autopilot_interface.start();
   ip = autopilot_interface.initial_position;
 
   // TODO: Figure out how to correctly specify height
   startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
+  std::cerr << "ipx: " << ip.x << "ipy: " << ip.y << "\n";
+  #else
+  startCoord << 0, 0, -configs->alt;
+  #endif
 
   // instantiate a waypoints class
   waypoints mission_waypoints(configs);
 
   // Locate LNED frame origin
   // TODO: Implement method which checks LNED origin remains constant throughout flight
+
+  // TODO run on quadcopter to obtain values
   msgs = autopilot_interface.current_messages;
   coordLocalNED LNED_0(msgs.local_position_ned.x,
                        msgs.local_position_ned.y,
@@ -303,6 +316,8 @@ void PNavLoop(configContainer *configs)
   coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI / 180.0,
                  msgs.global_position_int.lon * 1E-7 * M_PI / 180.0,
                  msgs.global_position_int.alt * 1E-3);
+  std::cerr << "nedx: " << msgs.local_position_ned.x << "nedy: " << msgs.local_position_ned.y << "nedz: " << msgs.local_position_ned.z << "\n";
+  std::cerr << "lat: " << msgs.global_position_int.lat << std:cerr << "lon: " << msgs.global_position_int.lon << "alt: " << msgs.global_position_int.alt << "\n";
 
   // TODO: Print origin too
   waypoints::FindOriginLocalNED(*configs, LNED_0, LLA_0);
@@ -337,7 +352,11 @@ void PNavLoop(configContainer *configs)
     }
     // GCS reads are handled by the CallbackFunction
     // check if vehicle is in offboard mode
+    #ifndef EMULATION
     offboard = ((0x00060000 & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
+    #else
+    offboard = true
+    #endif
 
     // set current wp
     ndx = mission_waypoints.current_wp;

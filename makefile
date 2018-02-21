@@ -41,6 +41,12 @@ PNav : $(PNAV_DIR)PNav.o  $(SHARED_O) $(XBEE_LIB_DIR)SerialXbee.o
 offboard : $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o $(PNAV_DIR)PNav.o $(XBEE_LIB_DIR)SerialXbee.o
 	$(CXX) $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o $(PNAV_DIR)PNav.o $(XBEE_LIB_DIR)SerialXbee.o -o $(BUILD_DIR)offboard $(PNAV_LIBS) $(CV_LIBS) -I$(XBEE_INCLUDE_DIR) -L$(XBEE_DIR)build -lboost_system -lboost_thread -lxbee_plus
 
+emulation: $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o PNav_Emulate $(XBEE_LIB_DIR)SerialXbee.o
+	$(CXX) $(OFFBOARD_DIR)offboard.o $(SHARED_O) $(CV_DIR)CV.o $(PNAV_DIR)PNav.o $(XBEE_LIB_DIR)SerialXbee.o -o $(BUILD_DIR)offboard $(PNAV_LIBS) $(CV_LIBS) -I$(XBEE_INCLUDE_DIR) -L$(XBEE_DIR)build -lboost_system -lboost_thread -lxbee_plus -D EMULATION
+
+PNav_Emulate: 
+	$(CXX) $(CXXFLAGS) -c $(PNAV_DIR)PNav.cpp -o $(PNAV_DIR)PNav.o $(LINK_FLAGS) -I$(XBEE_INCLUDE_DIR) -D EMULATION
+
 # Compilation Commands
 $(OFFBOARD_DIR)offboard.o :
 	$(CXX) $(CXXFLAGS) -c $(OFFBOARD_DIR)offboard.cpp -o $(OFFBOARD_DIR)offboard.o $(LINK_FLAGS)

@@ -40,8 +40,8 @@
 bool PNav_shutdown = false;
 #ifndef EMULATION
 Autopilot_Interface *autopilot_interface_quit;
-#endif
 Serial_Port *serial_port_quit;
+#endif
 
 void PNav_call_stop()
 {
@@ -49,6 +49,7 @@ void PNav_call_stop()
 
   PNav_shutdown = true;
   PeeToCee.set_CV_start(false);
+  #ifndef EMULATION
   try
   {
     autopilot_interface_quit->handle_quit(SIGINT);
@@ -64,6 +65,7 @@ void PNav_call_stop()
   catch (int error)
   {
   }
+  #endif
   std::cerr << "PNav Quitting\n";
   exit(0);
 }
@@ -231,14 +233,15 @@ void CallbackFunction(XBEE::Frame *item)
 void UpdateGCS(XBEE::SerialXbee &xbee_interface)
 {
   /* Function to write an update message to the GCS at GCS_MAC address
-   * 
+   *
    * The messge will have the form:
    * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
    */
   XBEE::TransmitRequest frame_gcs(GCS_MAC);
   std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl
             << std::endl;
-  frame_gcs.SetData(vehicle_status.gcs_update);
+  //frame_gcs.SetData(vehicle_status.gcs_update);
+  frame_gcs.SetData("NEWMSG,UPDT,Q2,P35.300266 -120.661823 101.653000,SOnline,R0");
   xbee_interface.AsyncWriteFrame(&frame_gcs);
 }
 
@@ -259,8 +262,8 @@ void PNavLoop(configContainer *configs)
   //time_t endTime;
 
   // Setup Autopilot interface
-  Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
   #ifndef EMULATION
+  Serial_Port serial_port(configs->uart_name.c_str(), configs->baudrate);
   Autopilot_Interface autopilot_interface(&serial_port);
   #endif
 
@@ -284,22 +287,22 @@ void PNavLoop(configContainer *configs)
   steady_clock::time_point t0_log, t0_heartbeat, t1_log, t1_heartbeat, t0_POI, t1_POI;
   flight_logger flt_log;
 
-  serial_port_quit = &serial_port;
   #ifndef EMULATION
+  serial_port_quit = &serial_port;
   autopilot_interface_quit = &autopilot_interface;
   #endif
 
   //  Start interface and take initial position
-  serial_port.start();
   #ifndef EMULATION
+  serial_port.start();
   autopilot_interface.start();
   ip = autopilot_interface.initial_position;
 
   // TODO: Figure out how to correctly specify height
   startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
-  std::cerr << "ipx: " << ip.x << "ipy: " << ip.y << "\n";
+  //std::cerr << "ipx: " << ip.x << "ipy: " << ip.y << "\n";
   #else
-  startCoord << 0, 0, -configs->alt;
+  startCoord << -1.60003, 0.358183, -configs->alt;
   #endif
 
   // instantiate a waypoints class
@@ -309,6 +312,7 @@ void PNavLoop(configContainer *configs)
   // TODO: Implement method which checks LNED origin remains constant throughout flight
 
   // TODO run on quadcopter to obtain values
+  #ifndef EMULATION
   msgs = autopilot_interface.current_messages;
   coordLocalNED LNED_0(msgs.local_position_ned.x,
                        msgs.local_position_ned.y,
@@ -317,7 +321,11 @@ void PNavLoop(configContainer *configs)
                  msgs.global_position_int.lon * 1E-7 * M_PI / 180.0,
                  msgs.global_position_int.alt * 1E-3);
   std::cerr << "nedx: " << msgs.local_position_ned.x << "nedy: " << msgs.local_position_ned.y << "nedz: " << msgs.local_position_ned.z << "\n";
-  std::cerr << "lat: " << msgs.global_position_int.lat << std:cerr << "lon: " << msgs.global_position_int.lon << "alt: " << msgs.global_position_int.alt << "\n";
+  std::cerr << "lat: " << msgs.global_position_int.lat << "lon: " << msgs.global_position_int.lon << "alt: " << msgs.global_position_int.alt << "\n";
+  #else
+  coordLocalNED LNED_0(-1.60575, 0.366263, -1.17603);
+  coordLLA LLA_0(353002209, -1206618691, 101602);
+  #endif
 
   // TODO: Print origin too
   waypoints::FindOriginLocalNED(*configs, LNED_0, LLA_0);
@@ -355,33 +363,54 @@ void PNavLoop(configContainer *configs)
     #ifndef EMULATION
     offboard = ((0x00060000 & autopilot_interface.current_messages.heartbeat.custom_mode) == 393216);
     #else
-    offboard = true
+    offboard = true;
     #endif
 
     // set current wp
     ndx = mission_waypoints.current_wp;
     if (update_setpoint && (ndx < mission_waypoints.wps.size()) && !vehicle_status.role)
     {
+      #ifndef EMULATION
       set_position(mission_waypoints.wps[ndx][0],
                    mission_waypoints.wps[ndx][1],
                    mission_waypoints.wps[ndx][2], sp);
+      #else
+      sp.x = mission_waypoints.wps[ndx][0];
+      sp.y = mission_waypoints.wps[ndx][1];
+      sp.z = mission_waypoints.wps[ndx][2];
+      #endif
+
       std::cerr << "X POS: " << sp.x << " Y POS: " << sp.y << " Z POS: " << sp.z << std::endl;
       std::cerr << "VEL X " << sp.vx << " VEL Y " << sp.vy << " VEL Z " << sp.vz << " YAW: " << sp.yaw << " YAW RATE: " << sp.yaw_rate << std::endl;
+
+      #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
       std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
       update_setpoint = false;
+      #endif
     }
     else if (update_setpoint && (ndx < mission_waypoints.POI.size()) && vehicle_status.role)
     {
+      #ifndef EMULATION
       set_position(mission_waypoints.POI[ndx][0],
                    mission_waypoints.POI[ndx][1],
                    mission_waypoints.POI[ndx][2], sp);
+      #else
+      sp.x = mission_waypoints.POI[ndx][0];
+      sp.y = mission_waypoints.POI[ndx][1];
+      sp.z = mission_waypoints.POI[ndx][2];
+      #endif
+
       std::cerr << "X POS: " << sp.x << " Y POS: " << sp.y << " Z POS: " << sp.z << std::endl;
       std::cerr << "VEL X " << sp.vx << " VEL Y " << sp.vy << " VEL Z " << sp.vz << " YAW: " << sp.yaw << " YAW RATE: " << sp.yaw_rate << std::endl;
+
+      #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
+      update_setpoint = false;
+      #endif
+
       std::cerr << "Moving to POI " << ndx << std::endl;
       vehicle_status.status = "Moving";
-      update_setpoint = false;
     }
     else if (ndx >= mission_waypoints.POI.size() && vehicle_status.role)
     {
@@ -389,9 +418,25 @@ void PNavLoop(configContainer *configs)
     }
 
     // check current location
+    #ifndef EMULATION
     lpos = autopilot_interface.current_messages.local_position_ned;
     gpos = autopilot_interface.current_messages.global_position_int;
     tpos = autopilot_interface.current_messages.position_target_local_ned;
+    //std::cerr << "t\n";
+    #else
+    lpos.x = sp.x;
+    lpos.y = sp.y;
+    lpos.z = sp.z;
+
+    //std::cerr << "difference x: " << fabs(lpos.x - sp.x) << "\n";
+
+    coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
+    coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
+
+    gpos.lat = gTemp(0);
+    gpos.lon = gTemp(1);
+    gpos.alt = gTemp(2); 
+    #endif
 
     if (!configs->debug_delay)
       std::this_thread::sleep_for(std::chrono::milliseconds(configs->debug_delay)); //Ask what this is for
@@ -469,6 +514,7 @@ void PNavLoop(configContainer *configs)
       //std::cerr << vehicle_status.gcs_update << std::endl;
       std::cerr << "Updating GCS\n";
       UpdateGCS(xbee_interface);
+      std::cerr << "Waypoint index " << ndx << "\n";
       t0_heartbeat = steady_clock::now();
     }
 
@@ -478,7 +524,9 @@ void PNavLoop(configContainer *configs)
           (1 / configs->log_freq) * 1000)))
     {
 
+      #ifndef EMULATION
       flt_log.log(&autopilot_interface.current_messages);
+      #endif
       t0_log = steady_clock::now();
     }
 
@@ -512,6 +560,7 @@ void PNavLoop(configContainer *configs)
 
     // if current location is within tolerance of target setpoint
     // increment current waypoint index
+    //std::cerr << "difference x: " << fabs(lpos.x - sp.x) << "\n";
     if (offboard && (mission_waypoints.current_wp < mission_waypoints.wps.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
@@ -557,6 +606,8 @@ void PNavLoop(configContainer *configs)
   //time(&endTime);
   //std::cerr << "Exiting Comms test loop" << difftime(startTime, endTime) << std::endl;
   PeeToCee.set_CV_start(false);
+  #ifndef EMULATION
   autopilot_interface.stop();
   serial_port.stop();
+  #endif
 }

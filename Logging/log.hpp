@@ -6,9 +6,6 @@
 
 // Literals for directories logs appear in
 #define LOG_DIR "./logs"
-#define LOG_1 "/level1"
-#define LOG_2 "/level2"
-#define LOG_3 "/level3"
 
 #define LOG_1_NAME "all"
 #define LOG_2_NAME "internal-error"
@@ -19,14 +16,12 @@
 class Log {
     public: 
 
-    Log();
-    void level1(std::string);
-    void level2(std::string);
-    void level3(std::string);
+    Log(int);
+    void log(int, std::string);
 
     private:
-
-    std::shared_ptr<spdlog::logger> logger1, logger2, logger3;
+    int input_level;
+    std::shared_ptr<spdlog::logger> logger;
 
 };
 

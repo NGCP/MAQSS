@@ -96,19 +96,14 @@ void quit_handler(int sig) {
   }
 }
 
+
 int main(int argc, char **argv) {
-    configContainer configs;
     unsigned int nCaptures;
-    Log Logger;
+    //Log Logger;
+    configContainer configs;
+    Log Logger(configs.log_level);
+    Logger.log(3, "Offboard started");
 
-    Logger.level1("Offboard started");
-
-    if (argc > 1)
-        configs = fileIO::getConfig(argc, argv);
-    else {
-        Logger.level2("Must specify command line arguments");
-        exit(EXIT_FAILURE);
-    }
     fileIO::printConfig(&configs);
     configPointer = &configs;
     nCaptures = 0;

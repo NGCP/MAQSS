@@ -63,6 +63,11 @@ configContainer fileIO::getConfig(int argc, char** argv) {
           break;
       }
     } else ndx++;
+
+    // No -f detected; take last argument as inputfile 
+    if (ndx == argc){
+	configs.input_filename = argv[argc - 1];
+    }
   }
 
   // TODO: Make this handling case insensitive

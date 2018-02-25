@@ -99,7 +99,7 @@ static bool detectBall(const unsigned int &nCaptures, cv::Mat &image, cv::Mat &o
   cv::split(image, channels);
 
   // Threshold the image, keeping frames that are closer to white (a value of 255)
-  cv::threshold(channels[RED], output, 155, 255, cv::THRESH_BINARY);
+  cv::threshold(channels[CV_RED], output, 155, 255, cv::THRESH_BINARY);
   // Use a median blur to remove any binary noise
   cv::GaussianBlur(output, output, cv::Size(7, 7), 8, 8);
   // Use a Hough Transform to find the circles, and store their coordinates relative
@@ -268,7 +268,7 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, unsigned int &nCaptures, int &
   return found_ball;
 }
 
-void frameLoop(unsigned int &nCaptures, configContainer *configs)
+void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger)
 {
   bool nextFrame;
   int ctr;

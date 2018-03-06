@@ -23,6 +23,7 @@ PNav_to_CV::PNav_to_CV() {
     CV_start_ = false;
     CV_exit_ = false;
     role = QUICK_SEARCH; //Auto set to quicksearch
+    CV_found_ = false;
 }
 
 bool PNav_to_CV::CV_start() const {
@@ -40,6 +41,36 @@ int PNav_to_CV::get_role() const {
     return role;
 }
 
+int PNav_to_CV::get_lat() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return latitude;
+}
+
+int PNav_to_CV::get_lon() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return longitude;
+}
+
+int PNav_to_CV::get_height() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return height;
+}
+
+int PNav_to_CV::get_yaw() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return yaw;
+}
+
+float PNav_to_CV::get_pitch() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return pitch;
+}
+
+float PNav_to_CV::get_roll() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return roll;
+}
+
 void PNav_to_CV::set_CV_start(bool set) {
     std::lock_guard<std::mutex> lock(mutex_);
     CV_start_ = set;
@@ -54,7 +85,19 @@ void PNav_to_CV::set_role(int set) {
     std::lock_guard<std::mutex> lock(mutex_);
     role = set;
 }
+/*
+ * Latitude, Longitude are int's actual positions need to be multiplied
+ * by 1E-7 for accurate position
+ */
+void set_GPS(int lat, int lon, int height, int yaw, float pitchDeg, float rollDeg) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    latitude = lat;
+    longitude = lon;
+    heading = yaw;
+    pitch = pitchDeg;
+    roll = rollDeg;
 
+}
 //CV_to_PNav functions
 CV_to_PNav::CV_to_PNav() {
     CV_found_ = false;
@@ -65,9 +108,29 @@ bool CV_to_PNav::CV_found() const {
     return CV_found_;
 }
 
+int get_lat() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return latitude_;
+}
+
+int get_lon() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return longitude_;
+}
+
 void CV_to_PNav::set_CV_found(bool set) {
     std::lock_guard<std::mutex> lock(mutex_);
     CV_found_ = set;
+}
+
+void set_ball_lat(int lat) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    latitude_ = lat;
+}
+
+void set_ball_lon(int lon) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    longitude_ = lon;
 }
 
 void CV_to_PNav::CV_lock() {

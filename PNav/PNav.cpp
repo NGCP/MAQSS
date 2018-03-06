@@ -229,7 +229,7 @@ void CallbackFunction(XBEE::Frame *item)
 void UpdateGCS(XBEE::SerialXbee &xbee_interface)
 {
   /* Function to write an update message to the GCS at GCS_MAC address
-   * 
+   *
    * The messge will have the form:
    * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
    */
@@ -251,6 +251,8 @@ void PNavLoop(configContainer *configs)
   bool cv_started = false;
   unsigned int ndx(0);
   int pattern(0);
+  int cvGPS[2];
+  int ballLat, ballLon;
   coordLLA start_coordLLA;
   coordLocalNED startCoord;
   //time_t startTime;
@@ -462,12 +464,17 @@ void PNavLoop(configContainer *configs)
       flt_log.log(&autopilot_interface.current_messages);
       t0_log = steady_clock::now();
     }
-
+    PeeToCee.set_gps(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
+                      autopilot_interface.current_messages.attitude.pitch, 
+                      autopilot_interface.current_messages.attitude.roll);
     if (CeeToPee.CV_found())
     {
+      //DOES THE NEW GPS GET PLACED HERE?
+      ballLat = CeeToPee.get_ball_lat();
+      ballLon = CeeToPee.get_ball_lon();
       if (vehicle_status.role)
       {
-        mission_status.target_LLA << gpos.lat * 1E-7, gpos.lon * 1E-7, gpos.alt * 1E-3;
+        mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
         vehicle_status.gcs_update = "NEWMSG,VLD,Q" + std::to_string(configs->quad_id) + ",P" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
@@ -478,7 +485,7 @@ void PNavLoop(configContainer *configs)
       }
       else
       {
-        mission_status.target_LLA << gpos.lat * 1E-7, gpos.lon * 1E-7, gpos.alt * 1E-3;
+        mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
         vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
@@ -510,6 +517,9 @@ void PNavLoop(configContainer *configs)
         cv_started = true;
         PeeToCee.set_CV_start(cv_started);
       }
+      PeeToCee.set_gps(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
+                       autopilot_interface.current_messages.attitude.pitch, 
+                       autopilot_interface.current_messages.attitude.roll);
     }
     else if (offboard && (mission_waypoints.current_wp < mission_waypoints.POI.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
@@ -521,6 +531,7 @@ void PNavLoop(configContainer *configs)
       vehicle_status.status = "Scanning";
       cv_started = true;
       PeeToCee.set_CV_start(cv_started);
+      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.heading);
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&

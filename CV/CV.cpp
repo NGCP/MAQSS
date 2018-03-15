@@ -168,11 +168,8 @@ void morphingImage(cv::Mat input, cv::Mat *output) {
     int morph_size = 3;
 
     element = cv::getStructuringElement(MORPH_ELLIPSE, Size(2 * morph_size + 1, 2 * morph_size + 1), Point(morph_size, morph_size));
-    //morphologyEx(input, *output, MORPH_CLOSE, element);
-    cv::morphologyEx(input, temp1, MORPH_OPEN, element, Point(-1,-1), 1);
-    //morphologyEx(temp1, *output, MORPH_CLOSE, element, Point(-1,-1), 10);
-    cv::dilate(temp1, temp2, element, Point(-1,-1), 10);
-    cv::erode(temp2, *output, element, Point(-1,-1), 10);
+    cv::morphologyEx(input, temp1, MORPH_OPEN, element, Point(-1,-1), 3);
+    cv::morphologyEx(temp1, *output, MORPH_CLOSE, element, Point(-1,-1), 60);
 }
 
 /*
@@ -184,29 +181,10 @@ void morphingImage(cv::Mat input, cv::Mat *output) {
  *    -> Apply Hough Circles Algorithm
  */
 static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles) {
-    cv::Mat lowerRed, upperRed;
+    Mat original, rgbImage, ogImage, hsvImage, lowerRed, upperRed, redImage, blurImage, morphImage, temp;
     bool drawCircles = false, found_ball = false;
     int minRadius = 0;
     size_t i;
-
-    // Reduce image noise
-    cv::medianBlur(image, image, 3);
-
-    // Convert image to HSV color space from RGB
-    cv::cvtColor(image, image, cv::COLOR_BGR2HSV);
-
-    //Threshold the image, keeping only red pixels
-    cv::inRange(hsvImage, cv::Scalar(0,100,100), cv::Scalar(10, 255, 255), lowerRed);
-    cv::inRange(hsvImage, cv::Scalar(160,100,100), cv::Scalar(179, 255, 255), upperRed);
-
-    //Combine lower and upper red matrices
-    cv::addWeighted(lowerRed, 1.0, upperRed, 1.0, 0.0, output);
-
-    //Apply guassian blur to red hue Image
-    cv::GaussianBlur(output, output, cv::Size(9,9), 2, 2);
-
-    //Apply Hough Transform to detect circles in redImage
-    cv::HoughCircles(output, circles, cv::CV_HOUGH_GRADIENT, 1, output.rows/8, 100, 20, 0, 0);
 
     ogImage = image.clone();
 
@@ -227,7 +205,11 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     cv::GaussianBlur(redImage, blurImage, Size(9,9), 2, 2);
 
     //Apply Morphological operations
-    cv::morphingImage(blurImage, &morphImage);
+    morphingImage(blurImage, &morphImage);
+
+    // Apply guassian blur again
+    cv::GaussianBlur(morphImage, temp, Size(9,9), 2, 2);
+
 
     //Change min radius size if image is not resized
     if (role) {

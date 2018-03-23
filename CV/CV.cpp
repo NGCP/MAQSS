@@ -128,11 +128,14 @@ void calculateGPS(cv::Mat image, std::vector<Vec3f> &circles, GPS droneGPS, GPS 
     mpp = BALL_DIAMETER / (radius * 2);
     centerX = image.cols / 2;
     centerY = image.rows / 2;
+    //Adjust the center of the image to the drone's actual location based off of its pitch and roll
     adjX = circles[0][0] + height * tan(droneGPS.pitch) - centerX;
     adjY = centerY - circles[0][1] + height * tan(droneGPS.roll);
+    //Calculate the pixel's x and y difference between the ball and the adjusted center
     z = sqrt(pow(adjX, 2) + pow(adjY, 2));
     angle = atan(adjX/adjY);
     yawRads = degreesToRadian(droneGPS.yaw);
+    //Check each quadrant and adjust angle difference between drone's north and true noth accordingly
     if (adjX >= 0 && adjY >= 0) {
         north = z * cos(yawRads + angle);
         east = z * sin(yawRads + angle);
@@ -146,9 +149,12 @@ void calculateGPS(cv::Mat image, std::vector<Vec3f> &circles, GPS droneGPS, GPS 
         north = z * cos(RADIANS_270 - yawRads + angle);
         east = z * sin(RADIANS_270 - yawRads + angle);
     }
+    //Convert pixel dx and dy to meters then to latitude and longitude
+    //Add the change to the drone's gps and return the new value
     ballGPS->lat = droneGPS.lat  + ((north * mpp) / EARTH_RADIUS) * (DEGREE_180 / M_PI);
     ballGPS->lon = droneGPS.lon + ((east * mpp) / EARTH_RADIUS) * (DEGREE_180 / M_PI) / cos(droneGPS.lat * M_PI/DEGREE_180);
     
+    // Debug information to check Radius and meters are correct
     #ifdef DEBUG
         printf("\tRadius: %f, centerX %d, centerY: %d, ballX: %f, ballY: %f\n", radius, centerX, centerY, circles[0][0], circles[0][1]);
         printf("\tAngle: %f\n", radiansToDegrees(angle));
@@ -186,8 +192,10 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     int minRadius = 0;
     size_t i;
 
+    //Copy the original image for modifications
     ogImage = image.clone();
 
+    //Reduce the moise of the original image
     cv::medianBlur(image, image, 3);
 
     // Convert image to HSV
@@ -247,9 +255,10 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         //Resize the image for faster processing
         cv::resize(image, image, cv::Size(), 0.25, 0.25, INTER_LINEAR);
         // Call CV function
-        found_ball = runCV(role, image, output, circles);
-        CeeToPee.set_ball_lat(PeeToCee.get_lat());
-        CeeToPee.set_ball_lon(PeeToCee.get_lon());
+        if (found_ball = runCV(role, image, output, circles)) {
+            CeeToPee.set_ball_lat(PeeToCee.get_lat());
+            CeeToPee.set_ball_lon(PeeToCee.get_lon());
+        } 
         //Add GPS Calc and replace boolean return
     } else if (role == DEPTH_SEARCH) {
         //Lock thread access: Stops the PNav system from accessing the foundBall boolean
@@ -263,12 +272,13 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         droneGPS.roll = PeeToCee.get_role();
 
         // Call CV function:
-        found_ball = runCV(image, output, circles);
-        //Add GPS Calc and replace boolean return
-        calculateGPS(image, circles, droneGPS, &ballGPS);
-        //Set Ball GPS information in CeeToPee
-        CeeToPee.set_ball_lat(int(ballGPS.lat * TEN_TO_SEVENTH));
-        CeeToPee.set_ball_lon(int(ballGPS.lon * TEN_TO_SEVENTH));
+        if (found_ball = runCV(image, output, circles)) {
+            //Add GPS Calc and replace boolean return
+            calculateGPS(image, circles, droneGPS, &ballGPS);
+            //Set Ball GPS information in CeeToPee
+            CeeToPee.set_ball_lat(int(ballGPS.lat * TEN_TO_SEVENTH));
+            CeeToPee.set_ball_lon(int(ballGPS.lon * TEN_TO_SEVENTH));
+        }
         //Unlock Thread access: PNav system can now access bool and continue on
         CeeToPee.CV_unlock();
         //Stop it from running
@@ -295,7 +305,7 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 }
 
 void frameLoop(unsigned int &nCaptures, configContainer *configs) {
-    bool nextFrame, CV_found;
+    bool nextFrame, CV_found = false;
     int ctr = 1;
 
     raspicam::RaspiCam_Cv cam;
@@ -311,10 +321,11 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs) {
     while (nextFrame) {
         if (PeeToCee.CV_start()) {
             grabFrame(cam, ctr, image);
-            if ((CV_found = findBall(PeeToCee.get_role(), image, output, circles))) {
-                CeeToPee.set_CV_found(CV_found);
-            }
+            CV_found = findBall(PeeToCee.get_role(), image, output, circles);
+            //Set the mutex found attribute to tell PNav that a ball is found and to grab the GPS
+            CeeToPee.set_CV_found(CV_found);
             ctr++;
+            //Possibly remove if not needed for actual run
             nextFrame = nCaptures++ > MAX_IMGS ? false : true;
         }
     }

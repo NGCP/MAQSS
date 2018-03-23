@@ -464,9 +464,12 @@ void PNavLoop(configContainer *configs)
       flt_log.log(&autopilot_interface.current_messages);
       t0_log = steady_clock::now();
     }
+    
+    //Should this go here?
     PeeToCee.set_gps(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                       autopilot_interface.current_messages.attitude.pitch, 
                       autopilot_interface.current_messages.attitude.roll);
+
     if (CeeToPee.CV_found())
     {
       //DOES THE NEW GPS GET PLACED HERE?

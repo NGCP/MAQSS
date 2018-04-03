@@ -115,9 +115,9 @@ int main(int argc, char **argv) {
     }
     else{
         CeeToPee.set_CV_found(false);
-        std::thread CV_thread(frameLoop, std::ref(nCaptures), std::ref(configPointer));
+        //std::thread CV_thread(frameLoop, std::ref(nCaptures), std::ref(configPointer));
         std::thread PNav_thread(PNavLoop, std::ref(configPointer));
-        CV_thread.join();
+        //CV_thread.join();
         PNav_thread.join();
     }
     exit(EXIT_SUCCESS);

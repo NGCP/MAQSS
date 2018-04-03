@@ -34,6 +34,13 @@
 #include <TransmitRequest.hpp>
 #include "PNav.hpp"
 
+#ifdef EMULATION
+#define CALPOLY_LAT 353002209
+#define CALPOLY_LON -1206618691
+#define CALPOLY_ALT 101602
+#endif
+
+
 // TODO: Have karthik fix my makefile
 // scp -r zhangh94@10.42.0.1:/home/zhangh94/NGCP/MAQSS .
 
@@ -240,8 +247,7 @@ void UpdateGCS(XBEE::SerialXbee &xbee_interface)
   XBEE::TransmitRequest frame_gcs(GCS_MAC);
   std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl
             << std::endl;
-  //frame_gcs.SetData(vehicle_status.gcs_update);
-  frame_gcs.SetData("NEWMSG,UPDT,Q2,P35.300266 -120.661823 101.653000,SOnline,R0");
+  frame_gcs.SetData(vehicle_status.gcs_update);
   xbee_interface.AsyncWriteFrame(&frame_gcs);
 }
 
@@ -285,6 +291,9 @@ void PNavLoop(configContainer *configs)
 
   // start timer for logging
   steady_clock::time_point t0_log, t0_heartbeat, t1_log, t1_heartbeat, t0_POI, t1_POI;
+  #ifdef EMULATION
+  steady_clock::time_point t0_flight_delay, t1_flight_delay;
+  #endif
   flight_logger flt_log;
 
   #ifndef EMULATION
@@ -300,7 +309,6 @@ void PNavLoop(configContainer *configs)
 
   // TODO: Figure out how to correctly specify height
   startCoord << ip.x, ip.y, -configs->alt; // Assumes start position will be on ground
-  //std::cerr << "ipx: " << ip.x << "ipy: " << ip.y << "\n";
   #else
   startCoord << -1.60003, 0.358183, -configs->alt;
   #endif
@@ -311,7 +319,6 @@ void PNavLoop(configContainer *configs)
   // Locate LNED frame origin
   // TODO: Implement method which checks LNED origin remains constant throughout flight
 
-  // TODO run on quadcopter to obtain values
   #ifndef EMULATION
   msgs = autopilot_interface.current_messages;
   coordLocalNED LNED_0(msgs.local_position_ned.x,
@@ -324,7 +331,7 @@ void PNavLoop(configContainer *configs)
   std::cerr << "lat: " << msgs.global_position_int.lat << "lon: " << msgs.global_position_int.lon << "alt: " << msgs.global_position_int.alt << "\n";
   #else
   coordLocalNED LNED_0(-1.60575, 0.366263, -1.17603);
-  coordLLA LLA_0(353002209, -1206618691, 101602);
+  coordLLA LLA_0(CALPOLY_LAT * 1E-7 * M_PI / 180.0, CALPOLY_LON * 1E-7 * M_PI / 180.0, CALPOLY_ALT * 1E-3);
   #endif
 
   // TODO: Print origin too
@@ -347,6 +354,11 @@ void PNavLoop(configContainer *configs)
   // store initial time for logging and writing heartbeat msgs
   t0_log = steady_clock::now();
   t0_heartbeat = steady_clock::now();
+
+  #ifdef EMULATION
+  t0_flight_delay = steady_clock::now();
+  #endif
+
   ndx = 0;
   std::cerr << "Entering loop\n";
 
@@ -380,9 +392,6 @@ void PNavLoop(configContainer *configs)
       sp.z = mission_waypoints.wps[ndx][2];
       #endif
 
-      std::cerr << "X POS: " << sp.x << " Y POS: " << sp.y << " Z POS: " << sp.z << std::endl;
-      std::cerr << "VEL X " << sp.vx << " VEL Y " << sp.vy << " VEL Z " << sp.vz << " YAW: " << sp.yaw << " YAW RATE: " << sp.yaw_rate << std::endl;
-
       #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
       std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
@@ -400,9 +409,6 @@ void PNavLoop(configContainer *configs)
       sp.y = mission_waypoints.POI[ndx][1];
       sp.z = mission_waypoints.POI[ndx][2];
       #endif
-
-      std::cerr << "X POS: " << sp.x << " Y POS: " << sp.y << " Z POS: " << sp.z << std::endl;
-      std::cerr << "VEL X " << sp.vx << " VEL Y " << sp.vy << " VEL Z " << sp.vz << " YAW: " << sp.yaw << " YAW RATE: " << sp.yaw_rate << std::endl;
 
       #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
@@ -422,20 +428,36 @@ void PNavLoop(configContainer *configs)
     lpos = autopilot_interface.current_messages.local_position_ned;
     gpos = autopilot_interface.current_messages.global_position_int;
     tpos = autopilot_interface.current_messages.position_target_local_ned;
-    //std::cerr << "t\n";
     #else
-    lpos.x = sp.x;
-    lpos.y = sp.y;
-    lpos.z = sp.z;
+    if(mission_waypoints.wps.size() == 0) {
+      lpos.x = LNED_0(0);
+      lpos.y = LNED_0(1);
+      lpos.z = LNED_0(2);
 
-    //std::cerr << "difference x: " << fabs(lpos.x - sp.x) << "\n";
+      gpos.lat = CALPOLY_LAT;
+      gpos.lon = CALPOLY_LON;
+      gpos.alt = CALPOLY_ALT;
+    }
+    else {
+      t1_flight_delay = steady_clock::now();
+      if ((((duration_cast<milliseconds>(t1_flight_delay - t0_flight_delay).count()) >
+            (1 / configs->heartbeat_freq) * 1000)))
+      {
+        lpos.x = sp.x;
+        lpos.y = sp.y;
+        lpos.z = sp.z;
 
-    coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
-    coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
+        coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
+        coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
 
-    gpos.lat = gTemp(0);
-    gpos.lon = gTemp(1);
-    gpos.alt = gTemp(2); 
+        //std::cerr << "gpos: " << gTemp << std::endl;
+        gpos.lat = gTemp(0) * 1E7;
+        gpos.lon = gTemp(1) * 1E7;
+        gpos.alt = gTemp(2) * 1E3; 
+
+        t0_flight_delay = steady_clock::now();
+      }
+    }
     #endif
 
     if (!configs->debug_delay)
@@ -514,7 +536,7 @@ void PNavLoop(configContainer *configs)
       //std::cerr << vehicle_status.gcs_update << std::endl;
       std::cerr << "Updating GCS\n";
       UpdateGCS(xbee_interface);
-      std::cerr << "Waypoint index " << ndx << "\n";
+      std::cerr << "Waypoint index " << ndx << " of " << mission_waypoints.wps.size() << "\n";
       t0_heartbeat = steady_clock::now();
     }
 

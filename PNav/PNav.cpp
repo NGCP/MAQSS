@@ -240,7 +240,7 @@ void UpdateGCS(XBEE::SerialXbee &xbee_interface)
   xbee_interface.AsyncWriteFrame(&frame_gcs);
 }
 
-void PNavLoop(configContainer *configs)
+void PNavLoop(configContainer *configs, Log &logger)
 {
   // TODO: Make a comms(RBP test mode which doesnt try to start the autopilot_interface)  test loop
   using namespace std::chrono;

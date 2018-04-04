@@ -1,6 +1,8 @@
 #ifndef CV_HPP
 #define CV_HPP
 
+#include "log.hpp"
+
 #define MAX_IMGS 5000
 
 //Search Modes
@@ -20,9 +22,9 @@
 #define FOUND_STR "Found"
 
 // CV definitions
-#define BLUE 0
-#define GREEN 1
-#define RED 2
+#define CV_BLUE 0
+#define CV_GREEN 1
+#define CV_RED 2
 
 //Localization Definitions
 //#define SENSOR_WIDTH 3.76
@@ -39,7 +41,7 @@
 class configContainer;
 
 void CV_call_stop();
-void frameLoop(unsigned int& nCaptures, configContainer *configs);
+void frameLoop(unsigned int& nCaptures, configContainer *configs, Log &logger);
 void testLoop(unsigned int& nCaptures, configContainer *configs);
 
 #endif

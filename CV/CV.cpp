@@ -102,16 +102,16 @@ static void setupCamera(raspicam::RaspiCam_Cv &cam, configContainer *configs) {
 /*
  * Takes an image and vectors (edges from HoughCircles algo) and draw those
  * vectors onto the image for debugging purposes
- */
+*/
 static void drawCircles(cv::Mat *image, std::vector<cv::Vec3f> &circles) {
     for (int i = 0; i < circles.size(); i++) {
         int radius;
         cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
         radius = cvRound(circles[i][2]);
         // Draw the circle center
-        cv::circle(image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+        cv::circle(*image, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
         // Draw the circle outline
-        cv::circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+        cv::circle(*image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
     }
 }
 
@@ -227,9 +227,11 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/8, 100, 20, minRadius, 200);
 
     if (circles.size() > 0) {
+        /*
         #ifdef DEBUG
             drawCircles(image, circles);
         #endif
+        */
         std::cerr << "Found Ball" << std::endl;
         found_ball = true;
     }
@@ -243,7 +245,7 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
  * Detailed search locks the CeeToPee thread before beggining CV
  */
 static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec3f> &circles) {
-    bool foundBall = false;
+    bool found_ball = false;
     GPS droneGPS, ballGPS;
     ballGPS.pitch = 0;
     ballGPS.yaw = 0;
@@ -272,7 +274,7 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         droneGPS.roll = PeeToCee.get_role();
 
         // Call CV function:
-        if (found_ball = runCV(image, output, circles)) {
+        if (found_ball = runCV(role, image, output, circles)) {
             //Add GPS Calc and replace boolean return
             calculateGPS(image, circles, droneGPS, &ballGPS);
             //Set Ball GPS information in CeeToPee
@@ -285,16 +287,16 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         PeeToCee.set_CV_start(false);
     }
     #ifdef DEBUG
-        Print output image for debugging
+        // Print output image for debugging
         cv::imwrite("output" + std::to_string(ctr) + ".jpg",output);
     #endif
-    return foundBall;
+    return found_ball;
 }
 
 /*
  * Grabs the most current image from the Raspicam camera
  */
-static bool grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
+static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
     std::string imageHeader = "image";
 
     cam.grab();
@@ -304,7 +306,7 @@ static bool grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
     cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
 }
 
-void frameLoop(unsigned int &nCaptures, configContainer *configs) {
+void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
     bool nextFrame, CV_found = false;
     int ctr = 1;
 
@@ -335,6 +337,7 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs) {
 /*
  * Run CV process in test mode to continually take up to 2000 images
  */
+/*
 void testLoop(unsigned int &nCaptures, configContainer *configs) {
     int ctr;
     raspicam::RaspiCam_Cv cam;
@@ -356,4 +359,4 @@ void testLoop(unsigned int &nCaptures, configContainer *configs) {
     }
     cam.release();
 }
-
+*/

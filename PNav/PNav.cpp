@@ -466,7 +466,7 @@ void PNavLoop(configContainer *configs, Log &logger)
     }
     
     //Should this go here?
-    PeeToCee.set_gps(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
+    PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                       autopilot_interface.current_messages.attitude.pitch, 
                       autopilot_interface.current_messages.attitude.roll);
 
@@ -520,7 +520,7 @@ void PNavLoop(configContainer *configs, Log &logger)
         cv_started = true;
         PeeToCee.set_CV_start(cv_started);
       }
-      PeeToCee.set_gps(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
+      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                        autopilot_interface.current_messages.attitude.pitch, 
                        autopilot_interface.current_messages.attitude.roll);
     }
@@ -534,7 +534,9 @@ void PNavLoop(configContainer *configs, Log &logger)
       vehicle_status.status = "Scanning";
       cv_started = true;
       PeeToCee.set_CV_start(cv_started);
-      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.heading);
+      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
+                       autopilot_interface.current_messages.attitude.pitch, 
+                       autopilot_interface.current_messages.attitude.roll);
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&

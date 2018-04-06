@@ -39,8 +39,8 @@ class CV_to_PNav {
     public:
         CV_to_PNav();
         bool CV_found() const;
-        int get_lat() const;
-        int get_lon() const;
+        int get_ball_lat() const;
+        int get_ball_lon() const;
         void set_CV_found(bool set);
         void set_ball_lat(int lat);
         void set_ball_lon(int lon);

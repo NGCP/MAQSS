@@ -24,7 +24,6 @@ PNav_to_CV::PNav_to_CV() {
     CV_start_ = false;
     CV_exit_ = false;
     role = QUICK_SEARCH; //Auto set to quicksearch
-    CV_found_ = false;
 }
 
 bool PNav_to_CV::CV_start() const {
@@ -44,12 +43,12 @@ int PNav_to_CV::get_role() const {
 
 int PNav_to_CV::get_lat() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return latitude;
+    return lat;
 }
 
 int PNav_to_CV::get_lon() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return longitude;
+    return lon;
 }
 
 int PNav_to_CV::get_height() const {
@@ -90,11 +89,11 @@ void PNav_to_CV::set_role(int set) {
  * Latitude, Longitude are int's actual positions need to be multiplied
  * by 1E-7 for accurate position
  */
-void set_GPS(int lat, int lon, int height, int yaw, float pitchDeg, float rollDeg) {
+void PNav_to_CV::set_GPS(int lat, int lon, int height, int yaw, float pitchDeg, float rollDeg) {
     std::lock_guard<std::mutex> lock(mutex_);
-    latitude = lat;
-    longitude = lon;
-    heading = yaw;
+    this->lat = lat;
+    this->lon = lon;
+    this->yaw = yaw;
     pitch = pitchDeg;
     roll = rollDeg;
 
@@ -109,12 +108,12 @@ bool CV_to_PNav::CV_found() const {
     return CV_found_;
 }
 
-int get_lat() const {
+int CV_to_PNav::get_ball_lat() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return latitude_;
 }
 
-int get_lon() const {
+int CV_to_PNav::get_ball_lon() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return longitude_;
 }
@@ -124,12 +123,12 @@ void CV_to_PNav::set_CV_found(bool set) {
     CV_found_ = set;
 }
 
-void set_ball_lat(int lat) {
+void CV_to_PNav::set_ball_lat(int lat) {
     std::lock_guard<std::mutex> lock(mutex_);
     latitude_ = lat;
 }
 
-void set_ball_lon(int lon) {
+void CV_to_PNav::set_ball_lon(int lon) {
     std::lock_guard<std::mutex> lock(mutex_);
     longitude_ = lon;
 }
@@ -178,7 +177,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, quit_handler);
 
     if (configs.cam_Test) {
-        testLoop(nCaptures, configPointer);
+        //testLoop(nCaptures, configPointer);
     }
     else{
         CeeToPee.set_CV_found(false);

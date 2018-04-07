@@ -555,9 +555,13 @@ void PNavLoop(configContainer *configs, Log &logger)
     }
     
     //Should this go here?
+    #ifndef EMULATION
     PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                       autopilot_interface.current_messages.attitude.pitch, 
                       autopilot_interface.current_messages.attitude.roll);
+    #else
+    PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
+    #endif
 
     if (CeeToPee.CV_found())
     {
@@ -610,9 +614,13 @@ void PNavLoop(configContainer *configs, Log &logger)
         cv_started = true;
         PeeToCee.set_CV_start(cv_started);
       }
+      #ifndef EMULATION
       PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                        autopilot_interface.current_messages.attitude.pitch, 
                        autopilot_interface.current_messages.attitude.roll);
+      #else
+      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
+      #endif
     }
     else if (offboard && (mission_waypoints.current_wp < mission_waypoints.POI.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
@@ -624,9 +632,13 @@ void PNavLoop(configContainer *configs, Log &logger)
       vehicle_status.status = "Scanning";
       cv_started = true;
       PeeToCee.set_CV_start(cv_started);
+      #ifndef EMULATION
       PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 
                        autopilot_interface.current_messages.attitude.pitch, 
                        autopilot_interface.current_messages.attitude.roll);
+      #else
+      PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
+      #endif
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&

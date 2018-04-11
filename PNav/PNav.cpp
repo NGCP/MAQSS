@@ -106,8 +106,6 @@ struct vehicle_status
   std::string gcs_update;
 } vehicle_status;
 
-// callback function for xbee_interface
-// Example GCS mission: "NEWMSG,MSN,Q2,P35.308 -120.668 -0.5985199129208922, H-11.191,F139.0,D123"
 
 std::vector<std::string> split(const std::string &s, char delim)
 {
@@ -120,6 +118,9 @@ std::vector<std::string> split(const std::string &s, char delim)
   }
   return tokens;
 }
+
+// callback function for xbee_interface
+// Example GCS mission: "NEWMSG,MSN,Q2,P35.308 -120.668 -0.5985199129208922, H-11.191,F139.0,D123"
 
 void CallbackFunction(XBEE::Frame *item)
 {

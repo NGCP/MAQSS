@@ -166,13 +166,20 @@ void quit_handler(int sig) {
 
 int main(int argc, char **argv) {
     unsigned int nCaptures;
-    //Log Logger;
     configContainer configs;
+    
+    if (argc > 1)
+        configs = fileIO::getConfig(argc, argv);
+    else {
+        std::cerr << "Must specify command line arguments" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    configPointer = &configs;
+
     Log Logger(configs.log_level);
     Logger.log(3, "Offboard started");
 
     fileIO::printConfig(&configs);
-    configPointer = &configs;
     nCaptures = 0;
     signal(SIGINT, quit_handler);
 

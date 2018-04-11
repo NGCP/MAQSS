@@ -8,7 +8,7 @@ MAVLINK_DIR=$(CURDIR)/Resources/
 BUILD_DIR=$(CURDIR)/build/
 XBEE_DIR=$(CURDIR)/Resources/xbeeplus/
 XBEE_LIB_DIR=$(XBEE_DIR)src/
-XBEE_INCLUDE_DIR=$(XBEE_DIR)include/s
+XBEE_INCLUDE_DIR=$(XBEE_DIR)include/
 
 
 CXX=g++

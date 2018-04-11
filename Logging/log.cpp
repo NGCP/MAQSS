@@ -43,7 +43,7 @@ Log::Log(int input_level) {
     std::string dirName = LOG_DIR + date + curTime;
     // Shared file sink for all log messages
     auto all_sink = std::make_shared<spdlog::sinks::simple_file_sink_mt>(dirName);
-    logger = std::make_shared<spdlog::logger>(all_sink);
+    logger = std::make_shared<spdlog::logger>("level " + std::to_string(input_level), all_sink);
 }
 
 void Log::log(int log_level, std::string msg) {

@@ -425,6 +425,21 @@ void PNavLoop(configContainer *configs, Log &logger)
     {
       vehicle_status.status = "Idle";
     }
+    else if (ndx >= mission_waypoints.wps.size() && mission_waypoints.wps.size() > 0 && !vehicle_status.role)
+    {
+      // std::cerr << ".wps.size() " << mission_waypoints.wps.size();
+      // vehicle_status.role = 1;
+      vehicle_status.lat = gpos.lat * 1E-7;
+      vehicle_status.lon = gpos.lon * 1E-7;
+      vehicle_status.alt = gpos.alt * 1E-3;
+      vehicle_status.gcs_update = "NEWMSG,ROLE,Q" + std::to_string(configs->quad_id) + ",P" +
+                                  std::to_string(vehicle_status.lat) + " " +
+                                  std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
+                                  ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
+      std::cerr << vehicle_status.gcs_update << std::endl;
+      std::cerr << "Updating GCS\n";
+      UpdateGCS(xbee_interface);
+    }
 
     // check current location
     #ifndef EMULATION

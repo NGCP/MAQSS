@@ -22,7 +22,4 @@ Multiple Autonomous Quadcopter Search System
 6. `cd` into `MAQSS/build` and run `sudo ./offboard -f ../InputFile`.
 
 If you are getting a `Permission denied` error (assuming you're in
-`MAQSS/build`), run:
-   ```bash
-   chmod 777 ../Logging/create_log.sh` and redo step 6. 
-   ```
+`MAQSS/build`), run `chmod 777 ../Logging/create_log.sh` and redo step 6. 

@@ -92,6 +92,10 @@ public:
           CoordFrame output_coord_frame = CoordFrame::LOCAL_NED,
           PlotOutput plot_output = PlotOutput::MATLAB_CODE);
 
+  void PlotPOI(configContainer& configs,
+          CoordFrame output_coord_frame = CoordFrame::LOCAL_NED,
+          PlotOutput plot_output = PlotOutput::MATLAB_CODE);
+
   // TODO: Overload to handle vectors?
   // static methods to convert between LLA and LocalNED. ConfigContiner is required because origin information is stored there
   static coordLocalNED LLAtoLocalNED(configContainer& configs, coordLLA &LLA,
@@ -123,4 +127,3 @@ private:
 };
 
 #endif /* WAYPOINTS_HPP */
-

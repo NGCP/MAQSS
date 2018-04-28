@@ -81,6 +81,7 @@ struct mission_status
 {
   coordLLA target_LLA;
   std::string msg;
+  std::string poi_id;
   std::string mission_type;
   double lat = 0;          // [deg]
   double lon = 0;          // [deg]
@@ -201,7 +202,7 @@ void CallbackFunction(XBEE::Frame *item)
     else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg)
     {
 
-      // Expect Msg: "NEWMSG,POI,QX,P35.1234:-120.5678
+      // Expect Msg: "NEWMSG,POI,QX,P35.1234 -120.5678,IX"
       delim = ' ';
       std::cerr << "Handle Point of Interest Message: " << str_data << std::endl;
       mission_status.mission_type = "Detailed";
@@ -211,6 +212,7 @@ void CallbackFunction(XBEE::Frame *item)
       position_strings = split(msg_components[3], delim);
       mission_status.lat = std::stod(position_strings[0]);
       mission_status.lon = std::stod(position_strings[1]);
+      mission_status.poi_id = std::stod(msg_components[4]); 
       vehicle_status.role = 1; // change role to detailed
       mission_status.changed_flag = true;
     }
@@ -265,6 +267,8 @@ void PNavLoop(configContainer *configs, Log &logger)
   int pattern(0);
   int cvGPS[2];
   int ballLat, ballLon;
+  int poi_int = 0;
+  std::string poi_id;
   coordLLA start_coordLLA;
   coordLocalNED startCoord;
   //time_t startTime;
@@ -598,13 +602,17 @@ void PNavLoop(configContainer *configs, Log &logger)
       else
       {
         mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
+        poi_id = std::to_string(configs->quad_id) + std::to_str(poi_int);
         vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
-                                    std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
+                                    std::to_string(mission_status.target_LLA[1]) + " " + 
+                                    std::to_string(mission_status.target_LLA[2]) +
                                     ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " +
-                                    std::to_string(mission_status.target_LLA[2]);
+                                    std::to_string(mission_status.target_LLA[2]) + ",I" + poi_id;
+;
+        poi_int++; 
       }
       CeeToPee.set_CV_found(false);
       UpdateGCS(xbee_interface);
@@ -656,6 +664,10 @@ void PNavLoop(configContainer *configs, Log &logger)
       PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
       #endif
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+      if (!CeeToPee.CV_found()) {
+         vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + " " + mission_status.poi_id;
+         UpdateGCS(xbee_interface);
+      }
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&
              (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&

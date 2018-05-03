@@ -212,7 +212,8 @@ void CallbackFunction(XBEE::Frame *item)
       position_strings = split(msg_components[3], delim);
       mission_status.lat = std::stod(position_strings[0]);
       mission_status.lon = std::stod(position_strings[1]);
-      mission_status.poi_id = std::stod(msg_components[4]); 
+      msg_components[4].erase(0, 1);
+      mission_status.poi_id = msg_components[4]; 
       vehicle_status.role = 1; // change role to detailed
       mission_status.changed_flag = true;
     }
@@ -267,7 +268,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   int pattern(0);
   int cvGPS[2];
   int ballLat, ballLon;
-  int poi_int = 0;
+  int poi_ctr = 0;
   std::string poi_id;
   coordLLA start_coordLLA;
   coordLocalNED startCoord;
@@ -440,7 +441,6 @@ void PNavLoop(configContainer *configs, Log &logger)
                                   std::to_string(vehicle_status.lat) + " " +
                                   std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
                                   ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
-      // std::cerr << vehicle_status.gcs_update << std::endl;
       std::cerr << "Updating GCS\n";
       UpdateGCS(xbee_interface);
     }
@@ -507,7 +507,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       cv_started = false;
     }
 
-    // if new search_chunk mission msg received, update Waypoin://i.imgur.com/0dayB3X.jpgt class
+    // if new search_chunk mission msg received, update Waypoint class
     if (mission_status.changed_flag)
     {
       std::cerr << "New Mission Received" << std::endl;
@@ -602,7 +602,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       else
       {
         mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
-        poi_id = std::to_string(configs->quad_id) + std::to_str(poi_int);
+        poi_id = (char)(configs->quad_id + 'A') + std::to_string(poi_ctr);
         vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " + 
@@ -611,8 +611,7 @@ void PNavLoop(configContainer *configs, Log &logger)
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " +
                                     std::to_string(mission_status.target_LLA[2]) + ",I" + poi_id;
-;
-        poi_int++; 
+        poi_ctr++; 
       }
       CeeToPee.set_CV_found(false);
       UpdateGCS(xbee_interface);
@@ -665,7 +664,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       #endif
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
       if (!CeeToPee.CV_found()) {
-         vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + " " + mission_status.poi_id;
+         vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + ",I" + mission_status.poi_id;
          UpdateGCS(xbee_interface);
       }
       cv_started = false;

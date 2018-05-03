@@ -187,7 +187,8 @@ int main(int argc, char **argv) {
         //testLoop(nCaptures, configPointer);
     }
     else{
-        CeeToPee.set_CV_found(false);
+        /* TODO lucas remove this */
+        //CeeToPee.set_CV_found(false);
         std::thread CV_thread(frameLoop, std::ref(nCaptures), std::ref(configPointer), std::ref(Logger));
         std::thread PNav_thread(PNavLoop, std::ref(configPointer), std::ref(Logger));
         CV_thread.join();

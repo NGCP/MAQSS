@@ -203,8 +203,8 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
 
     // Threshold the image, keeping only red pixels: OpenCV red hue range 0-10
     // and 160-179
-    cv::inRange(hsvImage, Scalar(0,100,100), Scalar(10, 255, 255), lowerRed);
-    cv::inRange(hsvImage, Scalar(160,100,100), Scalar(179, 255, 255), upperRed);
+    cv::inRange(hsvImage, Scalar(0,100,50), Scalar(30, 255, 255), lowerRed);
+    cv::inRange(hsvImage, Scalar(140,100,50), Scalar(179, 255, 255), upperRed);
 
     // Combine lower and upper red matrices
     cv::addWeighted(upperRed, 1.0, upperRed, 1.0, 0.0, redImage);
@@ -213,18 +213,19 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     cv::GaussianBlur(redImage, blurImage, Size(9,9), 2, 2);
 
     //Apply Morphological operations
-    morphingImage(blurImage, &morphImage);
+    //morphingImage(blurImage, &morphImage);
+    morphImage = blurImage;
 
     // Apply guassian blur again
     cv::GaussianBlur(morphImage, temp, Size(9,9), 2, 2);
-
 
     //Change min radius size if image is not resized
     if (role) {
         minRadius = 25;
     }
     // Apply Hough Transform to detect circles in redImage
-    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/8, 100, 20, minRadius, 200);
+    /* TODO readjust min, max (200) radius */
+    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/16, 100, 20, 0, 99999999);
 
     if (circles.size() > 0) {
         /*
@@ -290,6 +291,7 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         // Print output image for debugging
         cv::imwrite("output" + std::to_string(ctr) + ".jpg",output);
     #endif
+
     return found_ball;
 }
 
@@ -301,7 +303,7 @@ static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 
     cam.grab();
     cam.retrieve(image);
-    // Write the full size image to file
+    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
     
     cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
 }
@@ -326,6 +328,7 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
             CV_found = findBall(PeeToCee.get_role(), image, output, circles);
             //Set the mutex found attribute to tell PNav that a ball is found and to grab the GPS
             CeeToPee.set_CV_found(CV_found);
+            std::cerr << "CV" << std::endl;
             ctr++;
             //Possibly remove if not needed for actual run
             nextFrame = nCaptures++ > MAX_IMGS ? false : true;

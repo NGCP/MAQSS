@@ -281,7 +281,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   Autopilot_Interface autopilot_interface(&serial_port);
   #endif
 
-  std::cerr << "Before xbee initialization\n";
+  logger.log(3, "Before xbee initialization\n");
   // Setup Xbee serial interface and start reading
   // Use old XBEE library and COLONS instead of space
   XBEE::SerialXbee xbee_interface;
@@ -335,8 +335,8 @@ void PNavLoop(configContainer *configs, Log &logger)
   coordLLA LLA_0(msgs.global_position_int.lat * 1E-7 * M_PI / 180.0,
                  msgs.global_position_int.lon * 1E-7 * M_PI / 180.0,
                  msgs.global_position_int.alt * 1E-3);
-  std::cerr << "nedx: " << msgs.local_position_ned.x << "nedy: " << msgs.local_position_ned.y << "nedz: " << msgs.local_position_ned.z << "\n";
-  std::cerr << "lat: " << msgs.global_position_int.lat << "lon: " << msgs.global_position_int.lon << "alt: " << msgs.global_position_int.alt << "\n";
+  logger.log(3, "nedx: " + std::to_string(msgs.local_position_ned.x) + "nedy: " + std::to_string(msgs.local_position_ned.y) + "nedz: " + std::to_string(msgs.local_position_ned.z) + "\n");
+  logger.log(3, "lat: " + std::to_string(msgs.global_position_int.lat) + "lon: " + std::to_string(msgs.global_position_int.lon) + "alt: " + std::to_string(msgs.global_position_int.alt) + "\n");
   #else
   coordLocalNED LNED_0(-1.60575, 0.366263, -1.17603);
   coordLLA LLA_0(CALPOLY_LAT * 1E-7 * M_PI / 180.0, CALPOLY_LON * 1E-7 * M_PI / 180.0, CALPOLY_ALT * 1E-3);
@@ -368,7 +368,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   #endif
 
   ndx = 0;
-  std::cerr << "Entering loop\n";
+  logger.log(3, "Entering loop\n");
 
   // mainloop
   while (!PNav_shutdown)
@@ -402,7 +402,7 @@ void PNavLoop(configContainer *configs, Log &logger)
 
       #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
-      std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
+      logger.log(3, "Updating Setpoint " + std::to_string(ndx) + " of " + std::to_string(mission_waypoints.wps.size()) + "\n");
       update_setpoint = false;
       #endif
     }
@@ -423,7 +423,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       update_setpoint = false;
       #endif
 
-      std::cerr << "Moving to POI " << ndx << std::endl;
+      logger.log(3, "Moving to POI " + std::to_string(ndx) + "\n");
       vehicle_status.status = "Moving";
     }
     else if (ndx >= mission_waypoints.POI.size() && vehicle_status.role)
@@ -441,7 +441,7 @@ void PNavLoop(configContainer *configs, Log &logger)
                                   std::to_string(vehicle_status.lat) + " " +
                                   std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
                                   ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
-      std::cerr << "Updating GCS\n";
+      logger.log(3, "Updating GCS\n");
       UpdateGCS(xbee_interface);
     }
 
@@ -489,7 +489,7 @@ void PNavLoop(configContainer *configs, Log &logger)
     if (mission_status.start && mission_status.start != vehicle_status.start)
     {
       // TODO: Implement functionality for start/stop
-      std::cerr << "Start commanded" << std::endl;
+      logger.log(3, "Start commanded\n");
       vehicle_status.start = true;
       update_setpoint = true;
       if (!vehicle_status.role)
@@ -499,7 +499,7 @@ void PNavLoop(configContainer *configs, Log &logger)
     // if stop command, set flag (tell CV to stop?)
     if (!mission_status.start && mission_status.start != vehicle_status.start)
     {
-      std::cerr << "Stop commanded" << std::endl;
+      logger.log(3, "Stop commanded\n");
       vehicle_status.start = false;
       update_setpoint = false;
       vehicle_status.status = "Online";
@@ -510,7 +510,7 @@ void PNavLoop(configContainer *configs, Log &logger)
     // if new search_chunk mission msg received, update Waypoint class
     if (mission_status.changed_flag)
     {
-      std::cerr << "New Mission Received" << std::endl;
+      logger.log(3, "New Mission Received\n");
       mission_status.changed_flag = false;
 
       // calculate wp
@@ -522,10 +522,10 @@ void PNavLoop(configContainer *configs, Log &logger)
         startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
         startCoord[2] = ip.z - configs->alt;
         mission_waypoints.SetWps(startCoord, mission_status.heading, mission_status.distance, mission_status.field_heading, pattern);
-        std::cerr << "New Search Chunk Set with Parameters: heading = " << mission_status.heading << ", field_heading: " << mission_status.field_heading << ", distance: " << mission_status.distance << std::endl;
+        logger.log(3, "New Search Chunk Set with Parameters: heading = " + std::to_string(mission_status.heading) + ", field_heading: " + std::to_string(mission_status.field_heading) + ", distance: " + std::to_string(mission_status.distance) + "\n");
         mission_waypoints.PlotWp(*configs, CoordFrame::LLA);
         mission_waypoints.PlotWp(*configs, CoordFrame::LOCAL_NED);
-        std::cerr << std::endl;
+        logger.log(3, "\n");
       }
       else if (vehicle_status.role)
       { // append a POI waypoint
@@ -535,10 +535,10 @@ void PNavLoop(configContainer *configs, Log &logger)
         startCoord = waypoints::LLAtoLocalNED(*configs, start_coordLLA);
         startCoord[2] = ip.z - configs->alt;
         mission_waypoints.SetPOI(startCoord);
-        std::cerr << "New POI Set\n";
+        logger.log(3, "New POI Set\n");
         mission_waypoints.PlotPOI(*configs, CoordFrame::LLA);
         mission_waypoints.PlotPOI(*configs, CoordFrame::LOCAL_NED);
-        std::cerr << std::endl;
+        logger.log(3, "\n");
       }
     }
 
@@ -556,9 +556,9 @@ void PNavLoop(configContainer *configs, Log &logger)
                                   std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
                                   ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       //std::cerr << vehicle_status.gcs_update << std::endl;
-      std::cerr << "Updating GCS\n";
+      logger.log(3, "Updating GCS\n");
       UpdateGCS(xbee_interface);
-      std::cerr << "Waypoint index " << ndx << " of " << mission_waypoints.wps.size() << "\n";
+      logger.log(3, "Waypoint index " + std::to_string(ndx) + " of " + std::to_string(mission_waypoints.wps.size()) + "\n");
       t0_heartbeat = steady_clock::now();
     }
 

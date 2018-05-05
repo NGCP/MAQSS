@@ -315,11 +315,11 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
     raspicam::RaspiCam_Cv cam;
     cv::Mat image, output;
     std::vector<cv::Vec3f> circles;
-    std::cerr << "Before camera setup\n";
+    logger.log(3, "Before camera setup\n");
     // Setup camera interface
     cam_quit = &cam;
     setupCamera(cam, configs);
-    std::cerr << "CV thread is made\n";
+    logger.log(3, "CV thread is made\n");
 
     nextFrame = true;
     while (nextFrame) {
@@ -328,7 +328,7 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
             CV_found = findBall(PeeToCee.get_role(), image, output, circles);
             //Set the mutex found attribute to tell PNav that a ball is found and to grab the GPS
             CeeToPee.set_CV_found(CV_found);
-            std::cerr << "CV" << std::endl;
+            logger.log(3, "CV\n");
             ctr++;
             //Possibly remove if not needed for actual run
             nextFrame = nCaptures++ > MAX_IMGS ? false : true;

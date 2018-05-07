@@ -264,6 +264,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   bool offboard = false;
   bool update_setpoint = false;
   bool cv_started = false;
+  bool detailed_search_initialized = false;
   unsigned int ndx(0);
   int pattern(0);
   int cvGPS[2];
@@ -388,6 +389,7 @@ void PNavLoop(configContainer *configs, Log &logger)
 
     // set current wp
     ndx = mission_waypoints.current_wp;
+    //std::cerr << "ndx: " << ndx << " wps size: " << mission_waypoints.wps.size() << " pois size: " << mission_waypoints.POI.size() << std::endl;
     if (update_setpoint && (ndx < mission_waypoints.wps.size()) && !vehicle_status.role)
     {
       #ifndef EMULATION
@@ -400,9 +402,10 @@ void PNavLoop(configContainer *configs, Log &logger)
       sp.z = mission_waypoints.wps[ndx][2];
       #endif
 
+      //std::cerr << "[Quick Scan] Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
+
       #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
-      std::cerr << "Updating Setpoint " << ndx << " of " << mission_waypoints.wps.size() << std::endl;
       update_setpoint = false;
       #endif
     }
@@ -417,6 +420,9 @@ void PNavLoop(configContainer *configs, Log &logger)
       sp.y = mission_waypoints.POI[ndx][1];
       sp.z = mission_waypoints.POI[ndx][2];
       #endif
+
+      detailed_search_initialized = true;
+      //std::cerr << "[Detailed Search] Updating Setpoint " << ndx << " of " << mission_waypoints.POI.size() << std::endl;
 
       #ifndef EMULATION
       autopilot_interface.update_setpoint(sp);
@@ -648,7 +654,8 @@ void PNavLoop(configContainer *configs, Log &logger)
     else if (offboard && (mission_waypoints.current_wp < mission_waypoints.POI.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
-        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && vehicle_status.role)
+        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && vehicle_status.role
+        && detailed_search_initialized)
     {
       update_setpoint = true;
       mission_waypoints.current_wp++;
@@ -675,6 +682,9 @@ void PNavLoop(configContainer *configs, Log &logger)
       {
         mission_waypoints.current_wp++;
       }
+
+      // Wait until the location of next POI is processed before scanning again
+      detailed_search_initialized = false;
     }
 
     // if current waypoint index is past end of waypoints vector, tell GCS and loiter

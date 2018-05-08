@@ -603,7 +603,7 @@ void PNavLoop(configContainer *configs, Log &logger)
                                     ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
                                     std::to_string(mission_status.target_LLA[0]) + " " +
                                     std::to_string(mission_status.target_LLA[1]) + " " +
-                                    std::to_string(mission_status.target_LLA[2]);
+                                    std::to_string(mission_status.target_LLA[2]) + ",I" + mission_status.poi_id;
       }
       else
       {

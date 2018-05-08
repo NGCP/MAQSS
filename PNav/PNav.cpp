@@ -286,7 +286,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   // Setup Xbee serial interface and start reading
   // Use old XBEE library and COLONS instead of space
   XBEE::SerialXbee xbee_interface;
-  xbee_interface.Connect();
+  xbee_interface.Connect(MY_MAC);
   xbee_interface.ReadHandler = std::bind(&CallbackFunction, std::placeholders::_1);
 
   // declare variables for mavlink messages

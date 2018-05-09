@@ -241,14 +241,14 @@ void CallbackFunction(XBEE::Frame *item)
   }
 }
 
-void UpdateGCS(XBEE::SerialXbee &xbee_interface)
+void UpdateGCS(XBEE::SerialXbee &xbee_interface, configContainer *configs)
 {
   /* Function to write an update message to the GCS at GCS_MAC address
    *
    * The messge will have the form:
    * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
    */
-  XBEE::TransmitRequest frame_gcs(GCS_MAC);
+  XBEE::TransmitRequest frame_gcs(configs->gcs_mac);
   std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl
             << std::endl;
   frame_gcs.SetData(vehicle_status.gcs_update);
@@ -442,7 +442,7 @@ void PNavLoop(configContainer *configs, Log &logger)
                                   std::to_string(vehicle_status.lon) + " " + std::to_string(vehicle_status.alt) +
                                   ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       std::cerr << "Updating GCS\n";
-      UpdateGCS(xbee_interface);
+      UpdateGCS(xbee_interface, configs);
     }
 
     // check current location
@@ -557,7 +557,7 @@ void PNavLoop(configContainer *configs, Log &logger)
                                   ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role);
       //std::cerr << vehicle_status.gcs_update << std::endl;
       std::cerr << "Updating GCS\n";
-      UpdateGCS(xbee_interface);
+      UpdateGCS(xbee_interface, configs);
       std::cerr << "Waypoint index " << ndx << " of " << mission_waypoints.wps.size() << "\n";
       t0_heartbeat = steady_clock::now();
     }
@@ -614,7 +614,7 @@ void PNavLoop(configContainer *configs, Log &logger)
         poi_ctr++; 
       }
       CeeToPee.set_CV_found(false);
-      UpdateGCS(xbee_interface);
+      UpdateGCS(xbee_interface, configs);
     }
 
     // if current location is within tolerance of target setpoint
@@ -665,7 +665,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
       if (!CeeToPee.CV_found()) {
          vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + ",I" + mission_status.poi_id;
-         UpdateGCS(xbee_interface);
+         UpdateGCS(xbee_interface, configs);
       }
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&

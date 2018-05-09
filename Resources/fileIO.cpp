@@ -128,6 +128,10 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 
       else if (!strcmp(tmpChars, "log_level")) configs.log_level = std::stof(strtok(NULL, " \n"));
 
+      else if (!strcmp(tmpChars, "gcs_mac")) configs.gcs_mac = std::stof(strtok(NULL, " \n"));
+
+      else if (!strcmp(tmpChars, "radio_mac")) configs.gcs_mac = std::stof(strtok(NULL, " \n"));
+
       else if (!strcmp(tmpChars, "debug_delay")) configs.debug_delay = std::stoi(strtok(NULL, " \n"));
 
       else if (!strcmp(tmpChars, "field_heading")) configs.field_heading = std::stof(strtok(NULL, " \n"));
@@ -188,6 +192,8 @@ void fileIO::printConfig(configContainer *configs) {
   std::cerr << "Logging Enabled: " << configs->log << std::endl;
   std::cerr << "Logging Frequency: " << configs->log_freq << std::endl;
   std::cerr << "Logging Level: " << configs->log_level << std::endl;
+
+  std::cerr << "GCS MAC Address: " << configs->gcs_mac << std::endl;
 
   std::cerr << "End Configuration\n" << std::endl;
 

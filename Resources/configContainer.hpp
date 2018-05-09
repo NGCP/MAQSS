@@ -35,7 +35,7 @@ public:
     float log_freq = 2; // log frequency in Hz
     int log_level = 1;
     uint64_t gcs_mac = 0x0013A200409BD79C;
-    int radio_mac = 0x0;
+    uint64_t my_mac = 0x0;
     int debug_delay = 0; // delay at each loop of main loop for debugging purposes
     int baudrate = 57600; // microcomputer to flightcontroller baudrate (57600 default)
     int fd_CV_to_PNav;

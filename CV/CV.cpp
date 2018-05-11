@@ -295,6 +295,14 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
     return found_ball;
 }
 
+static void emulateFrame(cv::Mat &image, ctr) {
+    std::string imageHeader = "image";
+    image = cv::imread(imageHeader +  std::to_string(ctr) + ".jpg", CV_LOAD_IMAGE_UNCHANGED);
+    imageCounter++;
+
+    // Write the full size image to file
+    
+}
 /*
  * Grabs the most current image from the Raspicam camera
  */
@@ -309,22 +317,31 @@ static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 }
 
 void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
-    bool nextFrame, CV_found = false;
+    bool nextFrame, CV_found = false, emulate = true;
     int ctr = 1;
-
+    #ifndef EMULATE
+    emulate = false;
     raspicam::RaspiCam_Cv cam;
+    cam_quit = &cam;
+    setupCamera(cam, configs);
+    std::cerr << "CV thread is made\n"; 
+    #endif
+
     cv::Mat image, output;
     std::vector<cv::Vec3f> circles;
     std::cerr << "Before camera setup\n";
     // Setup camera interface
-    cam_quit = &cam;
-    setupCamera(cam, configs);
-    std::cerr << "CV thread is made\n";
+
 
     nextFrame = true;
     while (nextFrame) {
-        if (PeeToCee.CV_start()) {
-            grabFrame(cam, ctr, image);
+        if (PeeToCee.CV_start()) {i
+            if(emulate) {
+               emulateFrame(image, ctr); 
+            }
+            else {
+               grabFrame(cam, ctr, image);
+            }
             CV_found = findBall(PeeToCee.get_role(), image, output, circles);
             //Set the mutex found attribute to tell PNav that a ball is found and to grab the GPS
             CeeToPee.set_CV_found(CV_found);

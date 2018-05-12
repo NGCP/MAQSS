@@ -352,8 +352,7 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
 
     nextFrame = true;
     while (nextFrame) {
-	if(true){
-        /*if (PeeToCee.CV_start()) {*/
+        if (PeeToCee.CV_start()) {
    	    #ifdef EMULATION
 	    	emulateFrame(image, ctr);
 	    #else

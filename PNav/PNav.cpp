@@ -261,6 +261,7 @@ void PNavLoop(configContainer *configs, Log &logger)
   using namespace std::chrono;
 
   // Declare variables
+  bool role_switch = configs->role_switch;
   bool offboard = false;
   bool update_setpoint = false;
   bool cv_started = false;
@@ -436,7 +437,7 @@ void PNavLoop(configContainer *configs, Log &logger)
     {
       vehicle_status.status = "Idle";
     }
-    else if (ndx >= mission_waypoints.wps.size() && mission_waypoints.wps.size() > 0 && !vehicle_status.role)
+    else if (ndx >= mission_waypoints.wps.size() && mission_waypoints.wps.size() > 0 && !vehicle_status.role && role_switch)
     {
       // Sends a message to GCS to update the role from quick scan to detailed search when it's done scanning
       vehicle_status.lat = gpos.lat * 1E-7;

@@ -52,6 +52,9 @@ log=1
 log_freq=2
 log_level=1
 
+# Role Switch (0 for false, 1 for true)
+role_switch=0
+
 # Main Loop Delay [ms] (0 for none)
 debug_delay=0
 

@@ -70,7 +70,6 @@ void CV_call_stop() {
  */
 double degreesToRadian(double deg) {
     return deg * M_PI / DEGREE_180;
-<<<<<<< HEAD
 }
 
 /*

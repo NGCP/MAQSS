@@ -128,9 +128,9 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 
       else if (!strcmp(tmpChars, "log_level")) configs.log_level = std::stof(strtok(NULL, " \n"));
 
-      else if (!strcmp(tmpChars, "gcs_mac")) configs.gcs_mac = std::stoull(strtok(NULL, " \n"));
+      else if (!strcmp(tmpChars, "gcs_mac")) configs.gcs_mac = std::stoull(strtok(NULL, " \n"), 0, 16);
 
-      else if (!strcmp(tmpChars, "my_mac")) configs.my_mac = std::stoull(strtok(NULL, " \n"));
+      else if (!strcmp(tmpChars, "my_mac")) configs.my_mac = std::stoull(strtok(NULL, " \n"), 0, 16);
 
       else if (!strcmp(tmpChars, "debug_delay")) configs.debug_delay = std::stoi(strtok(NULL, " \n"));
 

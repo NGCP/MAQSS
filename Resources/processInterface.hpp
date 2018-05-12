@@ -49,4 +49,3 @@ private:
 };
 
 #endif /* processInterface_HPP */
-

@@ -304,6 +304,47 @@ void waypoints::PlotWp(configContainer& configs, CoordFrame output_coord_frame, 
   std::cerr << "Lh: " << lh << ", Lv: " << lv << std::endl;
 }
 
+void waypoints::PlotPOI(configContainer& configs, CoordFrame output_coord_frame, PlotOutput plot_output) {
+  unsigned int ndx;
+  Vector3d tmp_coord;
+  std::cerr << std::setprecision(12);
+  switch (output_coord_frame) {
+    case CoordFrame::ECEF:
+      std::cerr << "POI_ECEF = [ " << std::endl;
+      for (ndx = 0; ndx < POI.size(); ndx++) {
+        tmp_coord = LocalNEDtoECEF(configs, POI[ndx]);
+        std::cerr << tmp_coord[0] << "," << tmp_coord[1] << "," << tmp_coord[2] << ";" << std::endl;
+      }
+      std::cerr << "]" << std::endl;
+      std::cerr << "figure; plot(POI_ECEF(:,2), POI_ECEF(:,1),'o--'); grid on; axis equal;" << std::endl;
+      break;
+
+    case CoordFrame::LLA:
+      std::cerr << "POI_LLA = [ " << std::endl;
+      for (ndx = 0; ndx < POI.size(); ndx++) {
+        tmp_coord = LocalNEDtoLLA(configs, POI[ndx], AngleType::DEGREES);
+        std::cerr << tmp_coord[0] << "," << tmp_coord[1] << "," << tmp_coord[2] << ";" << std::endl;
+      }
+      std::cerr << "]" << std::endl;
+      std::cerr << "figure; plot(POI_LLA(:,2), POI_LLA(:,1),'o--'); grid on; axis equal;" << std::endl;
+      break;
+
+    case CoordFrame::BODY_NED:
+      // Output Message if BODY_NED selected and switch-case fall through to LOCAL_NED frame
+      std::cerr << "Plotting waypoints in Body NED frame NOT supported. Defaulting to Local NED..." << std::endl;
+
+    case CoordFrame::LOCAL_NED:
+      std::cerr << "POI_LOCAL_NED = [ " << std::endl;
+      for (ndx = 0; ndx < POI.size(); ndx++) {
+        std::cerr << POI[ndx][0] << "," << POI[ndx][1] << "," << POI[ndx][2] << ";" << std::endl;
+      }
+      std::cerr << "]" << std::endl;
+      std::cerr << "figure; plot(POI_LOCAL_NED(:,2), POI_LOCAL_NED(:,1),'o--'); grid on; axis equal;" << std::endl;
+      break;
+  }
+  std::cerr << "Lh: " << lh << ", Lv: " << lv << std::endl;
+}
+
 coordLocalNED waypoints::LLAtoLocalNED(configContainer& configs, coordLLA &LLA, AngleType input_angle) {
   /* Function to convert a coord in the LLA frame to a coord in the LocalNED frame given the origin in configs
    * 
@@ -547,4 +588,3 @@ coordLLA waypoints::coordAt(coordLLA &LLA, float bearing, float distance) {
 
 waypoints::~waypoints() {
 }
-

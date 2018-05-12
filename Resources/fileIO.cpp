@@ -126,6 +126,10 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 
       else if (!strcmp(tmpChars, "log_freq")) configs.log_freq = std::stof(strtok(NULL, " \n"));
 
+      else if (!strcmp(tmpChars, "log_level")) configs.log_level = std::stof(strtok(NULL, " \n"));
+      
+      else if (!strcmp(tmpChars, "role_switch")) configs.role_switch = std::stoi(strtok(NULL, " \n"));
+      
       else if (!strcmp(tmpChars, "debug_delay")) configs.debug_delay = std::stoi(strtok(NULL, " \n"));
 
       else if (!strcmp(tmpChars, "field_heading")) configs.field_heading = std::stof(strtok(NULL, " \n"));
@@ -153,6 +157,7 @@ configContainer fileIO::getConfig(int argc, char** argv) {
 void fileIO::printConfig(configContainer *configs) {
   std::cerr << "Printing Configuration:" << std::endl;
   std::cerr << "MAQSS Version: " << configs->version << std::endl;
+  std::cerr << "Quad: " << configs->quad_id << std::endl;
   std::cerr << std::endl;
 
   std::cerr << "Interface Parameters:" << std::endl;
@@ -184,6 +189,7 @@ void fileIO::printConfig(configContainer *configs) {
   std::cerr << "Logging Parameters" << std::endl;
   std::cerr << "Logging Enabled: " << configs->log << std::endl;
   std::cerr << "Logging Frequency: " << configs->log_freq << std::endl;
+  std::cerr << "Logging Level: " << configs->log_level << std::endl;
 
   std::cerr << "End Configuration\n" << std::endl;
 
@@ -191,4 +197,3 @@ void fileIO::printConfig(configContainer *configs) {
 
 fileIO::~fileIO() {
 }
-

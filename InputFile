@@ -1,10 +1,10 @@
 # InputFile to specify all configurations
 # NOTE: DO NOT LEAVE lines with blank whitespaces (will be stored into miscParams)
-# Quad Name must be supplied correctly or vehicle will misidentify itself to GCS
+#Quad Name must be supplied correctly or vehicle will misidentify itself to GCS
 
 ### Required Inputs
 Version=1.0
-Quad=B
+Quad=C
 
 ## Pipe Names
 # Pipe for CV to write to PNav (PNav reads from CV)
@@ -46,10 +46,14 @@ npoints=20
 alt=7
 setpoint_tolerance=3.0
 
-# Debugging
-# Logging
+## Debugging
+## Logging 
 log=1
 log_freq=2
+log_level=1
+
+# Role Switch (0 for false, 1 for true)
+role_switch=0
 
 # Main Loop Delay [ms] (0 for none)
 debug_delay=0
@@ -71,4 +75,4 @@ pattern=0
 ## End Known Inputs
 
 # These will be stored into misc_Params
-my_Name=Frank
+my_Name=Toby

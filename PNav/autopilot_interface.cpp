@@ -889,4 +889,3 @@ start_autopilot_interface_write_thread(void *args)
 }
 
 
-

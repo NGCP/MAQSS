@@ -277,7 +277,6 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
 
         // Call CV function:
         if (found_ball = runCV(role, image, output, circles)) {
-		printf("findBall: %d", found_ball);
             //Add GPS Calc and replace boolean return
             calculateGPS(image, circles, droneGPS, &ballGPS);
             //Set Ball GPS information in CeeToPee

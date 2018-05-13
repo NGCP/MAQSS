@@ -82,6 +82,7 @@ double radiansToDegrees(double rad) {
 /*
  * Initializes the camera module with set properties
  */
+
 static void setupCamera(raspicam::RaspiCam_Cv &cam, configContainer *configs) {
     cam.set(CV_CAP_PROP_FRAME_WIDTH, configs->cam_Width);
     cam.set(CV_CAP_PROP_FRAME_HEIGHT, configs->cam_Height);
@@ -225,7 +226,7 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     }
     // Apply Hough Transform to detect circles in redImage
     /* TODO readjust min, max (200) radius */
-    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/16, 100, 20, 0, 99999999);
+    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/16, 100, 10, 0, 0);
 
     if (circles.size() > 0) {
         /*
@@ -295,6 +296,25 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
     return found_ball;
 }
 
+static void emulateFrame(cv::Mat &image, int ctr) {
+    int ball = 72;
+    int no_ball = 42;
+    
+    std::string imageHeader = "/home/pi/NGCP/MAQSS/testimages/ball/image";
+    if (ctr > ball && ctr <= (ball + no_ball)){
+	imageHeader = "/home/pi/NGCP/MAQSS/testimages/no_ball/image";
+	ctr -= ball;
+    } else if (ctr > (ball + no_ball)){
+	imageHeader = "/home/pi/NGCP/MAQSS/testimages/part_ball/image";
+	ctr -= (ball + no_ball);
+    }   
+
+    image = cv::imread(imageHeader + " (" +  std::to_string(ctr) + ")" + ".jpg", CV_LOAD_IMAGE_UNCHANGED);
+
+    // Write the full size image to file
+    
+}
+
 /*
  * Grabs the most current image from the Raspicam camera
  */
@@ -311,30 +331,66 @@ static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
     bool nextFrame, CV_found = false;
     int ctr = 1;
-
-    raspicam::RaspiCam_Cv cam;
+    
+    #ifdef EMULATION
+	int false_positive = 0;
+	int false_negative = 0;	
+	std::cerr << "Emulation: cancel camera setup\n";
+    #else
+	raspicam::RaspiCam_Cv cam;
+	cam_quit = &cam;
+	setupCamera(cam, configs);
+	std::cerr << "CV thread is made\n"; 
+	std::cerr << "Before camera setup\n";
+    #endif
+   
+    
     cv::Mat image, output;
     std::vector<cv::Vec3f> circles;
     std::cerr << "Before camera setup\n";
     // Setup camera interface
-    cam_quit = &cam;
-    setupCamera(cam, configs);
-    std::cerr << "CV thread is made\n";
 
     nextFrame = true;
     while (nextFrame) {
         if (PeeToCee.CV_start()) {
-            grabFrame(cam, ctr, image);
+   	    #ifdef EMULATION
+	    	emulateFrame(image, ctr);
+	    #else
+		grabFrame(cam, ctr, image);
+	    #endif
+
             CV_found = findBall(PeeToCee.get_role(), image, output, circles);
+	    
+	    #ifdef EMULATION
+	    if (CV_found == 0 && ctr <= 72){
+		false_negative++;
+	    }	else if (CV_found == 1 && ctr > 72){
+		false_positive++;
+	    }
+	    printf("Image %d, ball_found: %d\n", ctr, CV_found);
+	    #endif
+
             //Set the mutex found attribute to tell PNav that a ball is found and to grab the GPS
             CeeToPee.set_CV_found(CV_found);
             std::cerr << "CV" << std::endl;
             ctr++;
+	    #ifdef EMULATION
+	    if (ctr == 120){
+		nextFrame = false;
+	    }
+	    #else
             //Possibly remove if not needed for actual run
             nextFrame = nCaptures++ > MAX_IMGS ? false : true;
+ 	    #endif
         }
     }
+
+    #ifndef EMULATION
     cam.release();
+    #else
+    printf("False Negatives: %d\n", false_negative);
+    printf("False Positives: %d\n", false_positive);
+    #endif
 }
 
 /*

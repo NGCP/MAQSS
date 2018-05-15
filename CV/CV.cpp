@@ -323,7 +323,7 @@ static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 
     cam.grab();
     cam.retrieve(image);
-    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+    //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
     
     cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
 }

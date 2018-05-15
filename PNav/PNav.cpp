@@ -589,36 +589,23 @@ void PNavLoop(configContainer *configs, Log &logger)
     PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
     #endif
 
-    if (CeeToPee.CV_found())
+    // If a ball is found in quick scan, send a TGT message
+    if (CeeToPee.CV_found() && !vehicle_status.role)
     {
-      //DOES THE NEW GPS GET PLACED HERE?
       ballLat = CeeToPee.get_ball_lat();
       ballLon = CeeToPee.get_ball_lon();
-      if (vehicle_status.role)
-      {
-        mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
-        vehicle_status.gcs_update = "NEWMSG,VLD,Q" + std::to_string(configs->quad_id) + ",P" +
-                                    std::to_string(mission_status.target_LLA[0]) + " " +
-                                    std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
-                                    ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
-                                    std::to_string(mission_status.target_LLA[0]) + " " +
-                                    std::to_string(mission_status.target_LLA[1]) + " " +
-                                    std::to_string(mission_status.target_LLA[2]) + ",I" + mission_status.poi_id;
-      }
-      else
-      {
-        mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
-        poi_id = (char)(configs->quad_id + 'A') + std::to_string(poi_ctr);
-        vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
-                                    std::to_string(mission_status.target_LLA[0]) + " " +
-                                    std::to_string(mission_status.target_LLA[1]) + " " + 
-                                    std::to_string(mission_status.target_LLA[2]) +
-                                    ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
-                                    std::to_string(mission_status.target_LLA[0]) + " " +
-                                    std::to_string(mission_status.target_LLA[1]) + " " +
-                                    std::to_string(mission_status.target_LLA[2]) + ",I" + poi_id;
-        poi_ctr++; 
-      }
+
+      mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
+      poi_id = (char)(configs->quad_id + 'A') + std::to_string(poi_ctr);
+      vehicle_status.gcs_update = "NEWMSG,TGT,Q" + std::to_string(configs->quad_id) + ",P" +
+                                  std::to_string(mission_status.target_LLA[0]) + " " +
+                                  std::to_string(mission_status.target_LLA[1]) + " " + 
+                                  std::to_string(mission_status.target_LLA[2]) +
+                                  ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
+                                  std::to_string(mission_status.target_LLA[0]) + " " +
+                                  std::to_string(mission_status.target_LLA[1]) + " " +
+                                  std::to_string(mission_status.target_LLA[2]) + ",I" + poi_id;
+      poi_ctr++; 
       CeeToPee.set_CV_found(false);
       UpdateGCS(xbee_interface, configs);
     }
@@ -669,11 +656,31 @@ void PNavLoop(configContainer *configs, Log &logger)
       #else
       PeeToCee.set_GPS(gpos.lat, gpos.lon, gpos.alt, gpos.hdg, 0, 0);
       #endif
+
+      // Hold this position and perform a CV scan
       std::this_thread::sleep_for(std::chrono::milliseconds(2500));
-      if (!CeeToPee.CV_found()) {
-         vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + ",I" + mission_status.poi_id;
-         UpdateGCS(xbee_interface, configs);
+
+      if(CeeToPee.CV_found()) {
+        // Send a VLD message if the ball is found
+
+        // Ask CV thread for balls position          
+        ballLat = CeeToPee.get_ball_lat();
+        ballLon = CeeToPee.get_ball_lon();
+        mission_status.target_LLA << ballLat * 1E-7, ballLon * 1E-7, gpos.alt * 1E-3;
+        vehicle_status.gcs_update = "NEWMSG,VLD,Q" + std::to_string(configs->quad_id) + ",P" +
+                                    std::to_string(mission_status.target_LLA[0]) + " " +
+                                    std::to_string(mission_status.target_LLA[1]) + " " + std::to_string(mission_status.target_LLA[2]) +
+                                    ",S" + vehicle_status.status + ",R" + std::to_string(vehicle_status.role) + ",T" +
+                                    std::to_string(mission_status.target_LLA[0]) + " " +
+                                    std::to_string(mission_status.target_LLA[1]) + " " +
+                                    std::to_string(mission_status.target_LLA[2]) + ",I" + mission_status.poi_id;
       }
+      else {
+        // Send a FP message if the ball is not found
+         vehicle_status.gcs_update = "NEWMSG,FP,Q" + std::to_string(configs->quad_id) + ",I" + mission_status.poi_id;
+      }
+      UpdateGCS(xbee_interface, configs);
+      
       cv_started = false;
       while ((mission_waypoints.current_wp < mission_waypoints.POI.size()) &&
              (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&

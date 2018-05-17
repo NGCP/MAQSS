@@ -191,6 +191,7 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     Mat original, rgbImage, ogImage, hsvImage, lowerRed, upperRed, redImage, blurImage, morphImage, temp;
     bool drawCircles = false, found_ball = false;
     int minRadius = 0;
+    int reliability = 5;
     size_t i;
 
     //Copy the original image for modifications
@@ -223,10 +224,11 @@ static bool runCV(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::Vec
     //Change min radius size if image is not resized
     if (role) {
         minRadius = 25;
+	reliability = 15;
     }
     // Apply Hough Transform to detect circles in redImage
     /* TODO readjust min, max (200) radius */
-    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/16, 100, 10, 0, 0);
+    cv::HoughCircles(morphImage, circles, CV_HOUGH_GRADIENT, 1, morphImage.rows/16, 100, reliability, minRadius, 0);
 
     if (circles.size() > 0) {
         /*
@@ -265,6 +267,7 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         } 
         //Add GPS Calc and replace boolean return
     } else if (role == DEPTH_SEARCH) {
+	#ifndef EMULATION
         //Lock thread access: Stops the PNav system from accessing the foundBall boolean
         CeeToPee.CV_lock();
         //Get current drone positional information
@@ -274,6 +277,7 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
         droneGPS.yaw = float(PeeToCee.get_yaw()) * N_TEN_TO_SECOND;
         droneGPS.pitch = PeeToCee.get_pitch();
         droneGPS.roll = PeeToCee.get_role();
+	#endif 
 
         // Call CV function:
         if (found_ball = runCV(role, image, output, circles)) {
@@ -283,10 +287,12 @@ static bool findBall(int role, cv::Mat &image, cv::Mat &output, std::vector<cv::
             CeeToPee.set_ball_lat(int(ballGPS.lat * TEN_TO_SEVENTH));
             CeeToPee.set_ball_lon(int(ballGPS.lon * TEN_TO_SEVENTH));
         }
+	#ifndef EMULATION
         //Unlock Thread access: PNav system can now access bool and continue on
         CeeToPee.CV_unlock();
         //Stop it from running
         PeeToCee.set_CV_start(false);
+	#endif
     }
     #ifdef DEBUG
         // Print output image for debugging
@@ -323,7 +329,6 @@ static void grabFrame(raspicam::RaspiCam_Cv &cam, int &ctr, cv::Mat &image) {
 
     cam.grab();
     cam.retrieve(image);
-    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
     
     cv::imwrite(imageHeader + std::to_string(ctr) + ".jpg", image);
 }
@@ -335,6 +340,8 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
     #ifdef EMULATION
 	int false_positive = 0;
 	int false_negative = 0;	
+	int part_ball = 0;
+	int role = 0;
 	std::cerr << "Emulation: cancel camera setup\n";
     #else
 	raspicam::RaspiCam_Cv cam;
@@ -355,17 +362,19 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
         if (PeeToCee.CV_start()) {
    	    #ifdef EMULATION
 	    	emulateFrame(image, ctr);
+		CV_found = findBall(role, image, output, circles);
 	    #else
 		grabFrame(cam, ctr, image);
+            	CV_found = findBall(PeeToCee.get_role(), image, output, circles);
 	    #endif
-
-            CV_found = findBall(PeeToCee.get_role(), image, output, circles);
 	    
 	    #ifdef EMULATION
 	    if (CV_found == 0 && ctr <= 72){
 		false_negative++;
-	    }	else if (CV_found == 1 && ctr > 72){
+	    }	else if (CV_found == 1 && ctr > 72 && ctr < (72 + 42)){
 		false_positive++;
+	    } else if ( CV_found && ctr >= (72 + 42) ) {
+		part_ball++;
 	    }
 	    printf("Image %d, ball_found: %d\n", ctr, CV_found);
 	    #endif
@@ -376,8 +385,25 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
             ctr++;
 	    #ifdef EMULATION
 	    if (ctr == 120){
-		nextFrame = false;
-	    }
+		if (role == 1){
+			nextFrame = false;
+			std::cerr << "Detailed search results\n" << std::endl;
+		} else {
+			role++;
+			ctr = 1;
+			std::cerr << "Quick search results\n" << std::endl;
+			std::cerr << "Beginning Detail Search Emulation\n" << std::endl;
+		}
+		
+		printf("False Negatives: %d\n", false_negative);
+    		printf("False Positives: %d\n", false_positive);
+	    	printf("Part Ball Positives: %d\n", part_ball);
+
+		false_negative = 0;
+		false_positive = 0;
+		part_ball = 0;
+
+	    } 
 	    #else
             //Possibly remove if not needed for actual run
             nextFrame = nCaptures++ > MAX_IMGS ? false : true;
@@ -387,9 +413,6 @@ void frameLoop(unsigned int &nCaptures, configContainer *configs, Log &logger) {
 
     #ifndef EMULATION
     cam.release();
-    #else
-    printf("False Negatives: %d\n", false_negative);
-    printf("False Positives: %d\n", false_positive);
     #endif
 }
 

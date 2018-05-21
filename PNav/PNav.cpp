@@ -198,6 +198,9 @@ void CallbackFunction(XBEE::Frame *item)
       // NEWMSG,STOP
       std::cerr << "Handle Stop Message: " << str_data << std::endl;
       mission_status.start = false;
+
+      vehicle_status.gcs_update = "NEWMSG,STOP";
+      UpdateGCS(xbee_interface, configs);
     }
     else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg)
     {
@@ -450,6 +453,11 @@ void PNavLoop(configContainer *configs, Log &logger)
       std::cerr << "Updating GCS\n";
       UpdateGCS(xbee_interface, configs);
     }
+    else if (!vehicle_status.start || !mission_status.start)
+    {
+       vehicle_status.gcs_update = "NEWMSG,STOP";
+       UpdateGCS(xbee_interface, configs);
+    }
 
     // check current location
     #ifndef EMULATION
@@ -511,6 +519,9 @@ void PNavLoop(configContainer *configs, Log &logger)
       vehicle_status.status = "Online";
       PeeToCee.set_CV_start(false);
       cv_started = false;
+
+      vehicle_status.gcs_update = "NEWMSG,STOP";
+      UpdateGCS(xbee_interface, configs);
     }
 
     // if new search_chunk mission msg received, update Waypoint class

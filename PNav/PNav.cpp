@@ -198,9 +198,6 @@ void CallbackFunction(XBEE::Frame *item)
       // NEWMSG,STOP
       std::cerr << "Handle Stop Message: " << str_data << std::endl;
       mission_status.start = false;
-
-      vehicle_status.gcs_update = "NEWMSG,STOP";
-      UpdateGCS(xbee_interface, configs);
     }
     else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg)
     {
@@ -453,11 +450,6 @@ void PNavLoop(configContainer *configs, Log &logger)
       std::cerr << "Updating GCS\n";
       UpdateGCS(xbee_interface, configs);
     }
-    else if (!vehicle_status.start || !mission_status.start)
-    {
-       vehicle_status.gcs_update = "NEWMSG,STOP";
-       UpdateGCS(xbee_interface, configs);
-    }
 
     // check current location
     #ifndef EMULATION
@@ -519,9 +511,6 @@ void PNavLoop(configContainer *configs, Log &logger)
       vehicle_status.status = "Online";
       PeeToCee.set_CV_start(false);
       cv_started = false;
-
-      vehicle_status.gcs_update = "NEWMSG,STOP";
-      UpdateGCS(xbee_interface, configs);
     }
 
     // if new search_chunk mission msg received, update Waypoint class
@@ -640,7 +629,8 @@ void PNavLoop(configContainer *configs, Log &logger)
     if (offboard && (mission_waypoints.current_wp < mission_waypoints.wps.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
-        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && !vehicle_status.role)
+        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && !vehicle_status.role
+        && mission_status.start)
 
     //    if ((search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size()) &&
     //            (fabs(tpos.x - sp.x) < configs->setpoint_tolerance) &&
@@ -666,7 +656,7 @@ void PNavLoop(configContainer *configs, Log &logger)
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
         (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && vehicle_status.role
-        && detailed_search_initialized)
+        && detailed_search_initialized && mission_status.start)
     {
       update_setpoint = true;
       mission_waypoints.current_wp++;

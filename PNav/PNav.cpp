@@ -629,7 +629,8 @@ void PNavLoop(configContainer *configs, Log &logger)
     if (offboard && (mission_waypoints.current_wp < mission_waypoints.wps.size()) &&
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
-        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && !vehicle_status.role)
+        (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && !vehicle_status.role
+        && mission_status.start)
 
     //    if ((search_chunk_waypoints.current_wp < search_chunk_waypoints.wps.size()) &&
     //            (fabs(tpos.x - sp.x) < configs->setpoint_tolerance) &&
@@ -655,7 +656,7 @@ void PNavLoop(configContainer *configs, Log &logger)
         (fabs(lpos.x - sp.x) < configs->setpoint_tolerance) &&
         (fabs(lpos.y - sp.y) < configs->setpoint_tolerance) &&
         (fabs(lpos.z - sp.z) < configs->setpoint_tolerance) && vehicle_status.role
-        && detailed_search_initialized)
+        && detailed_search_initialized && mission_status.start)
     {
       update_setpoint = true;
       mission_waypoints.current_wp++;

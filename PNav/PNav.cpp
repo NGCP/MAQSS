@@ -58,7 +58,6 @@ float y_diff;
 int diff_num;
 steady_clock::time_point t2_flight_delay, t3_flight_delay;
 
-
 bool PNav_shutdown = false;
 #ifndef EMULATION
 Autopilot_Interface *autopilot_interface_quit;
@@ -67,72 +66,71 @@ Serial_Port *serial_port_quit;
 
 void PNav_call_stop()
 {
-	// autopilot interface
+  // autopilot interface
 
-	PNav_shutdown = true;
-	PeeToCee.set_CV_start(false);
-#ifndef EMULATION
-	try
-	{
-		autopilot_interface_quit->handle_quit(SIGINT);
-	}
-	catch (int error)
-	{
-	}
+  PNav_shutdown = true;
+  PeeToCee.set_CV_start(false);
+  #ifndef EMULATION
+  try
+  {
+    autopilot_interface_quit->handle_quit(SIGINT);
+  }
+  catch (int error)
+  {
+  }
 
-	try
-	{
-		serial_port_quit->handle_quit(SIGINT);
-	}
-	catch (int error)
-	{
-	}
-#endif
-	std::cerr << "PNav Quitting\n";
-	exit(0);
+  try
+  {
+    serial_port_quit->handle_quit(SIGINT);
+  }
+  catch (int error)
+  {
+  }
+  #endif
+  std::cerr << "PNav Quitting\n";
+  exit(0);
 }
 
 struct mission_status
 {
-	coordLLA target_LLA;
-	std::string msg;
-	std::string poi_id;
-	std::string mission_type;
-	double lat = 0;          // [deg]
-	double lon = 0;          // [deg]
-	float alt = 0;           // [m]
-	float heading = 0;       // [deg]
-	float field_heading = 0; // [deg]
-	float distance = 0;      // [m]
-	bool changed_flag = false;
-	bool start = false; // commanded start/stop status
-
+  coordLLA target_LLA;
+  std::string msg;
+  std::string poi_id;
+  std::string mission_type;
+  double lat = 0;          // [deg]
+  double lon = 0;          // [deg]
+  float alt = 0;           // [m]
+  float heading = 0;       // [deg]
+  float field_heading = 0; // [deg]
+  float distance = 0;      // [m]
+  bool changed_flag = false;
+  bool start = false; // commanded start/stop status
 } mission_status;
 
 struct vehicle_status
 {
-	bool start = false; // vehicle mission start/stop status
-	bool role_changed = false;
-	unsigned int role = 0;
-	double lat;
-	double lon;
-	double alt;
-	coordLocalNED LNED;
-	std::string status = "Online";
-	std::string gcs_update;
+  bool start = false; // vehicle mission start/stop status
+  bool role_changed = false;
+  unsigned int role = 0;
+  double lat;
+  double lon;
+  double alt;
+  coordLocalNED LNED;
+  std::string status = "Online";
+  std::string gcs_update;
 } vehicle_status;
 
 
 std::vector<std::string> split(const std::string &s, char delim)
 {
-	std::stringstream ss(s);
-	std::string item;
-	std::vector<std::string> tokens;
-	while (getline(ss, item, delim))
-	{
-		tokens.push_back(item);
-	}
-	return tokens;
+  std::stringstream ss(s);
+  std::string item;
+  std::vector<std::string> tokens;
+  while (getline(ss, item, delim))
+  {
+    tokens.push_back(item);
+  }
+  return tokens;
 }
 
 // callback function for xbee_interface
@@ -140,134 +138,134 @@ std::vector<std::string> split(const std::string &s, char delim)
 
 void CallbackFunction(XBEE::Frame *item)
 {
+  // ReceivePacket pointer
+  // dynamic cast to type of frame I think it is (ReceivePacket), store in pointer
+  XBEE::ReceivePacket *r_packet = dynamic_cast<XBEE::ReceivePacket *>(item);
+  std::vector<std::string> msg_components;
+  bool valid_msg = true;
+  std::string str_data;
+  std::vector<std::string> position_strings(3);
+  int delim = ',';
 
-	// ReceivePacket pointer
-	// dynamic cast to type of frame I think it is (ReceivePacket), store in pointer
-	XBEE::ReceivePacket *r_packet = dynamic_cast<XBEE::ReceivePacket *>(item);
-	std::vector<std::string> msg_components;
-	bool valid_msg = true;
-	std::string str_data;
-	std::vector<std::string> position_strings(3);
-	int delim = ',';
+  int debug = 0;
+  std::cerr << "Entered Callback " << std::endl;
+  // check if pointer is NULL
+  if (r_packet != NULL)
+  {
+    str_data = r_packet->GetData();
+  }
+  std::cerr << debug++ << std::endl;
 
-	int debug = 0;
-	std::cerr << "Entered Callback " << std::endl;
-	// check if pointer is NULL
-	if (r_packet != NULL)
-	{
-		str_data = r_packet->GetData();
-	}
-	std::cerr << debug++ << std::endl;
+  // check char[6] == ',' (comma) (prevent crashes))
+  if (str_data[6] != ',')
+    valid_msg = false;
+  else
+  {
+    // split message
+    msg_components = split(str_data, delim);
 
-	// check char[6] == ',' (comma) (prevent crashes))
-	if (str_data[6] != ',')
-		valid_msg = false;
-	else
-	{
-		// split message
-		msg_components = split(str_data, delim);
+    // check first string is NEWMSG. If not, break
+    if (strcmp(msg_components[0].c_str(), "NEWMSG"))
+      valid_msg = false;
 
-		// check first string is NEWMSG. If not, break
-		if (strcmp(msg_components[0].c_str(), "NEWMSG"))
-			valid_msg = false;
+    // if-else if branch to determine message type and handling
+    if (!strcmp(msg_components[1].c_str(), "MSN") && valid_msg)
+    {
+      // NEWMSG,MSN,Q2,P35.3085519592:-120.668932266:0,H103.29054493,F139.7,D228.8
+      delim = ' ';
+      std::cerr << "Handling Mission Message: " << str_data << std::endl;
+      mission_status.mission_type = "Quick";
 
-		// if-else if branch to determine message type and handling
-		if (!strcmp(msg_components[1].c_str(), "MSN") && valid_msg)
-		{
-			// NEWMSG,MSN,Q2,P35.3085519592:-120.668932266:0,H103.29054493,F139.7,D228.8
-			delim = ' ';
-			std::cerr << "Handling Mission Message: " << str_data << std::endl;
-			mission_status.mission_type = "Quick";
+      // store search_chunk start position
+      msg_components[3].erase(0, 1);
+      position_strings = split(msg_components[3], delim);
+      mission_status.lat = std::stod(position_strings[0]);
+      mission_status.lon = std::stod(position_strings[1]);
+      mission_status.alt = std::stof(position_strings[2]);
 
-			// store search_chunk start position
-			msg_components[3].erase(0, 1);
-			position_strings = split(msg_components[3], delim);
-			mission_status.lat = std::stod(position_strings[0]);
-			mission_status.lon = std::stod(position_strings[1]);
-			mission_status.alt = std::stof(position_strings[2]);
+      // store search_chunk mission heading
+      msg_components[4].erase(0, 1);
+      mission_status.heading = std::stof(msg_components[4]);
 
-			// store search_chunk mission heading
-			msg_components[4].erase(0, 1);
-			mission_status.heading = std::stof(msg_components[4]);
+      // store search_chunk field heading
+      msg_components[5].erase(0, 1);
+      mission_status.field_heading = std::stof(msg_components[5]);
 
-			// store search_chunk field heading
-			msg_components[5].erase(0, 1);
-			mission_status.field_heading = std::stof(msg_components[5]);
+      // store search_chunk distance
+      msg_components[6].erase(0, 1);
+      mission_status.distance = std::stof(msg_components[6]);
 
-			// store search_chunk distance
-			msg_components[6].erase(0, 1);
-			mission_status.distance = std::stof(msg_components[6]);
+      // set flag to indicate new mission parameters received
+      mission_status.changed_flag = true;
+      vehicle_status.role = 0; // change role to quick
+    }
+    else if (!strcmp(msg_components[1].c_str(), "START") && valid_msg)
+    {
+      // NEWMSG,START
+      std::cerr << "Handle Start Message: " << str_data << std::endl;
+      mission_status.start = true;
+    }
+    else if (!strcmp(msg_components[1].c_str(), "STOP") && valid_msg)
+    {
+      // NEWMSG,STOP
+      std::cerr << "Handle Stop Message: " << str_data << std::endl;
+      mission_status.start = false;
+    }
+    else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg)
+    {
 
-			// set flag to indicate new mission parameters received
-			mission_status.changed_flag = true;
-			vehicle_status.role = 0; // change role to quick
-		}
-		else if (!strcmp(msg_components[1].c_str(), "START") && valid_msg)
-		{
-			// NEWMSG,START
-			std::cerr << "Handle Start Message: " << str_data << std::endl;
-			mission_status.start = true;
-		}
-		else if (!strcmp(msg_components[1].c_str(), "STOP") && valid_msg)
-		{
-			// NEWMSG,STOP
-			std::cerr << "Handle Stop Message: " << str_data << std::endl;
-			mission_status.start = false;
-		}
-		else if (!strcmp(msg_components[1].c_str(), "POI") && valid_msg)
-		{
+      // Expect Msg: "NEWMSG,POI,QX,P35.1234 -120.5678,IX"
+      delim = ' ';
+      std::cerr << "Handle Point of Interest Message: " << str_data << std::endl;
+      mission_status.mission_type = "Detailed";
 
-			// Expect Msg: "NEWMSG,POI,QX,P35.1234 -120.5678,IX"
-			delim = ' ';
-			std::cerr << "Handle Point of Interest Message: " << str_data << std::endl;
-			mission_status.mission_type = "Detailed";
+      // store search_chunk start position
+      msg_components[3].erase(0, 1);
+      position_strings = split(msg_components[3], delim);
+      mission_status.lat = std::stod(position_strings[0]);
+      mission_status.lon = std::stod(position_strings[1]);
+      msg_components[4].erase(0, 1);
+      mission_status.poi_id = msg_components[4]; 
+      vehicle_status.role = 1; // change role to detailed
+      mission_status.changed_flag = true;
+    }
+    else if (!strcmp(msg_components[1].c_str(), "ROLE") && valid_msg)
+    {
 
-			// store search_chunk start position
-			msg_components[3].erase(0, 1);
-			position_strings = split(msg_components[3], delim);
-			mission_status.lat = std::stod(position_strings[0]);
-			mission_status.lon = std::stod(position_strings[1]);
-			msg_components[4].erase(0, 1);
-			mission_status.poi_id = msg_components[4]; 
-			vehicle_status.role = 1; // change role to detailed
-			mission_status.changed_flag = true;
-		}
-		else if (!strcmp(msg_components[1].c_str(), "ROLE") && valid_msg)
-		{
+      std::cerr << "Handle Role Set Message: " << str_data << std::endl;
 
-			std::cerr << "Handle Role Set Message: " << str_data << std::endl;
+      // Expect Msg: "NEWMSG,ROLE,QX,RX
+      msg_components[3].erase(0, 1); // store role information
+      vehicle_status.role = std::stoi(msg_components[3].c_str());
+      vehicle_status.role_changed = true;
+      std::cerr << "Role Set as: " << vehicle_status.role << std::endl;
+      PeeToCee.set_role(vehicle_status.role);
+    }
+    else
+      valid_msg = false;
+  }
 
-			// Expect Msg: "NEWMSG,ROLE,QX,RX
-			msg_components[3].erase(0, 1); // store role information
-			vehicle_status.role = std::stoi(msg_components[3].c_str());
-			vehicle_status.role_changed = true;
-			std::cerr << "Role Set as: " << vehicle_status.role << std::endl;
-			PeeToCee.set_role(vehicle_status.role);
-		}
-		else
-			valid_msg = false;
-	}
-
-	// If msg was invalid, output error msg to screen
-	if (!valid_msg)
-	{
-		std::cerr << "Invalid Msg Read: " << str_data << std::endl;
-		std::cerr << "Message ignored!" << std::endl;
-	}
+  // If msg was invalid, output error msg to screen
+  if (!valid_msg)
+  {
+    std::cerr << "Invalid Msg Read: " << str_data << std::endl;
+    std::cerr << "Message ignored!" << std::endl;
+  }
 }
 
 void UpdateGCS(XBEE::SerialXbee &xbee_interface, configContainer *configs)
 {
-	/* Function to write an update message to the GCS at GCS_MAC address
-	 *
-	 * The messge will have the form:
-	 * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
-	 */
-	XBEE::TransmitRequest frame_gcs(configs->gcs_mac);
-	std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl
-		<< std::endl;
-	frame_gcs.SetData(vehicle_status.gcs_update);
-	xbee_interface.AsyncWriteFrame(&frame_gcs);
+
+  /* Function to write an update message to the GCS at GCS_MAC address
+   *
+   * The messge will have the form:
+   * Q0,P35.300236 -120.661858 108.119000,SOnline,R0
+   */
+  XBEE::TransmitRequest frame_gcs(configs->gcs_mac);
+  std::cerr << "Writing Msg: " << vehicle_status.gcs_update << std::endl
+            << std::endl;
+  frame_gcs.SetData(vehicle_status.gcs_update);
+  xbee_interface.AsyncWriteFrame(&frame_gcs);
 }
 
 void PNavLoop(configContainer *configs, Log &logger)
@@ -338,7 +336,8 @@ void PNavLoop(configContainer *configs, Log &logger)
 #endif
 
 	// instantiate a waypoints class
-	waypoints mission_waypoints(configs);
+	waypoints k
+    (configs);
 
 	// Locate LNED frame origin
 	// TODO: Implement method which checks LNED origin remains constant throughout flight
@@ -491,7 +490,6 @@ void PNavLoop(configContainer *configs, Log &logger)
         std::cerr << "smooth pnav on\n";        
 
         //Get next point
-
         if(destination_reached == true){
           lCur(0) = lpos.x;
           lCur(1) = lpos.y;
@@ -520,12 +518,13 @@ void PNavLoop(configContainer *configs, Log &logger)
           }
           destination_reached = false;
         } else {
-          std::cerr << "Current waypoint: " << std::endl << lCur << std::endl;
-          std::cerr << "Next waypoint: " << std::endl << lNext << std::endl;
+          
+          //std::cerr << "Current waypoint: " << std::endl << lCur << std::endl;
+          //std::cerr << "Next waypoint: " << std::endl << lNext << std::endl;
 
-          std::cerr << "x diff: " << x_diff << std::endl;
-          std::cerr << "y diff: " << y_diff << std::endl;
-          std::cerr << "switch to: " << diff_num << std::endl;
+          //std::cerr << "x diff: " << x_diff << std::endl;
+          //std::cerr << "y diff: " << y_diff << std::endl;
+          //std::cerr << "switch to: " << diff_num << std::endl;
 
 
           switch(diff_num){
@@ -533,10 +532,7 @@ void PNavLoop(configContainer *configs, Log &logger)
               x_diff = (float)lNext(0) - (float)lCur(0);
               if(x_diff < 0){
                 destination_reached = true;
-                std::cerr << "------------------------------------------\n";
-                std::cerr << "reached destination\n";
               } else {
-                std::cerr << "Shifting to the right\n";
                 t3_flight_delay = steady_clock::now();
                 lpos.x += (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
                 lCur(0) += (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
@@ -547,11 +543,7 @@ void PNavLoop(configContainer *configs, Log &logger)
               x_diff = (float)lNext(0) - (float)lCur(0);
               if(x_diff > 0){
                 destination_reached = true;
-                std::cerr << "------------------------------------------\n";
-
-                std::cerr << "reached destination\n";
               } else {
-                std::cerr << "Shifting to the left\n";
                 t3_flight_delay = steady_clock::now();
                 lpos.x -= (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
                 lCur(0) -= (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
@@ -563,8 +555,6 @@ void PNavLoop(configContainer *configs, Log &logger)
               y_diff = (float)lNext(1) - (float)lCur(1);
               if(y_diff < 0){
                 destination_reached = true;
-                std::cerr << "------------------------------------------\n";
-                std::cerr << "reached destination\n";
               } else {
                 t3_flight_delay = steady_clock::now();
                 lpos.y += (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
@@ -577,9 +567,6 @@ void PNavLoop(configContainer *configs, Log &logger)
               y_diff = (float)lNext(1) - (float)lCur(1);
               if(y_diff > 0){
                 destination_reached = true;
-                std::cerr << "------------------------------------------\n";
-
-                std::cerr << "reached destination\n";
               } else {
                 t3_flight_delay = steady_clock::now();
                 lpos.y -= (0.0044 * (duration_cast<milliseconds>(t3_flight_delay - t2_flight_delay).count()));
@@ -588,7 +575,6 @@ void PNavLoop(configContainer *configs, Log &logger)
               break;
             }
             case 4:{
-              std::cerr << "drone jumps to position\n";
               lpos.x = sp.x; 
               lpos.y = sp.y; 
               lpos.z = sp.z;
@@ -626,19 +612,6 @@ void PNavLoop(configContainer *configs, Log &logger)
         std::cerr << "current point: " << lCur << std::endl;
 
         #endif
-				//std::cerr << "waypoints are given\n";
-
-        //std::cerr << "Converting NED to LLA: " << std::endl << "NED: " << lTemp << std::endl << "LLA: " << gTemp << std::endl; 
-
-        //coordLocalNED lTemp_test = waypoints::LLAtoLocalNED(*configs, gTemp);
-        //std::cerr << "Converting LLA to NED: " << std::endl << "LLA: " << gTemp << std::endl << "NED: " << lTemp_test << std::endl;
-
-				//std::cerr << "gpos: " << gTemp << std::endl;
-
-        //std::cerr << "Next waypoint: " + std::to_string(gpos.lat) + "|" + std::to_string(gpos.lon) + "\n";
-
-        //std::cerr << "Testing conversion: " + std::to_string(lTemp_test(0)) + " should match with: " + std::to_string(lpos.x) + "\n";
-
 				t0_flight_delay = steady_clock::now();
 			}
 		}

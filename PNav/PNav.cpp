@@ -486,9 +486,7 @@ void PNavLoop(configContainer *configs, Log &logger)
       //std::cerr << "gpos: " << gTemp << std::endl;
       gpos.lat = gTemp(0) * 1E7;
       gpos.lon = gTemp(1) * 1E7;
-      gpos.alt = gTemp(2) * 1E3; 
-
-      t0_flight_delay = steady_clock::now();
+      gpos.alt = gTemp(2) * 1E3;
     }
     #endif
 

@@ -291,6 +291,7 @@ void PNavLoop(configContainer *configs, Log &logger)
 
   // declare variables for mavlink messages
   mavlink_set_position_target_local_ned_t sp;
+  mavlink_set_position_target_local_ned_t previous_sp;
   mavlink_set_position_target_local_ned_t ip;
   mavlink_local_position_ned_t lpos;
   mavlink_global_position_int_t gpos;
@@ -462,29 +463,32 @@ void PNavLoop(configContainer *configs, Log &logger)
       lpos.y = LNED_0(1);
       lpos.z = LNED_0(2);
 
+      previous_sp.x = lpos.x;
+      previous_sp.y = lpos.y;
+      previous_sp.z = lpos.z;
+
       gpos.lat = CALPOLY_LAT;
       gpos.lon = CALPOLY_LON;
       gpos.alt = CALPOLY_ALT;
     }
     else {
       t1_flight_delay = steady_clock::now();
-      if ((((duration_cast<milliseconds>(t1_flight_delay - t0_flight_delay).count()) >
-            (1 / configs->heartbeat_freq) * 1000)))
-      {
-        lpos.x = sp.x;
-        lpos.y = sp.y;
-        lpos.z = sp.z;
+      // get time difference in seconds
+      auto time_diff = duration_cast<seconds>(t1_flight_delay - t0_flight_delay).count();
 
-        coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
-        coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
+      lpos.x = previous_sp.x + time_diff * 4.4 * (sp.x - previous_sp.x);
+      lpos.x = previous_sp.x + time_diff * 4.4 * (sp.y - previous_sp.y);
+      lpos.x = previous_sp.x + time_diff * 4.4 * (sp.z - previous_sp.z);
 
-        //std::cerr << "gpos: " << gTemp << std::endl;
-        gpos.lat = gTemp(0) * 1E7;
-        gpos.lon = gTemp(1) * 1E7;
-        gpos.alt = gTemp(2) * 1E3; 
+      coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
+      coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
 
-        t0_flight_delay = steady_clock::now();
-      }
+      //std::cerr << "gpos: " << gTemp << std::endl;
+      gpos.lat = gTemp(0) * 1E7;
+      gpos.lon = gTemp(1) * 1E7;
+      gpos.alt = gTemp(2) * 1E3; 
+
+      t0_flight_delay = steady_clock::now();
     }
     #endif
 
@@ -639,6 +643,9 @@ void PNavLoop(configContainer *configs, Log &logger)
     {
       update_setpoint = true;
       mission_waypoints.current_wp++;
+      // TODO comment
+      previous_sp = sp;
+      t0_flight_delay = steady_clock::now();
       if (!cv_started)
       { //Start CV when inside bounds
         cv_started = true;
@@ -660,6 +667,9 @@ void PNavLoop(configContainer *configs, Log &logger)
     {
       update_setpoint = true;
       mission_waypoints.current_wp++;
+      // TODO comment
+      previous_sp = sp;
+      t0_flight_delay = steady_clock::now();
       vehicle_status.status = "Scanning";
       cv_started = true;
       PeeToCee.set_CV_start(cv_started);

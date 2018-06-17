@@ -483,7 +483,6 @@ void PNavLoop(configContainer *configs, Log &logger)
       coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
       coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
 
-      //std::cerr << "gpos: " << gTemp << std::endl;
       gpos.lat = gTemp(0) * 1E7;
       gpos.lon = gTemp(1) * 1E7;
       gpos.alt = gTemp(2) * 1E3;

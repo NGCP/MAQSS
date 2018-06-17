@@ -477,8 +477,8 @@ void PNavLoop(configContainer *configs, Log &logger)
       auto time_diff = duration_cast<seconds>(t1_flight_delay - t0_flight_delay).count();
 
       lpos.x = previous_sp.x + time_diff * 4.4 * (sp.x - previous_sp.x);
-      lpos.x = previous_sp.x + time_diff * 4.4 * (sp.y - previous_sp.y);
-      lpos.x = previous_sp.x + time_diff * 4.4 * (sp.z - previous_sp.z);
+      lpos.y = previous_sp.y + time_diff * 4.4 * (sp.y - previous_sp.y);
+      lpos.z = previous_sp.z + time_diff * 4.4 * (sp.z - previous_sp.z);
 
       coordLocalNED lTemp(lpos.x, lpos.y, lpos.z);
       coordLLA gTemp = waypoints::LocalNEDtoLLA(*configs, lTemp, AngleType::DEGREES);
